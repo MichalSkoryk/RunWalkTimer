@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Download the latest Run/Walk Timer APK directly from GitHub Releases."
+    />
+    <meta name="theme-color" content="#f4f7f9" />
+    <title>Run/Walk Timer — Android download</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="Run/Walk Timer home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <path d="M12 16h20l-5-5" />
+              <path d="m32 16-5 5" />
+              <path d="M36 32H16l5-5" />
+              <path d="m16 32 5 5" />
+            </svg>
+          </span>
+          <span>Run/Walk Timer</span>
+        </a>
+
+        <a class="header-link" data-repository-link href="#">
+          GitHub
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M7 4h9v9" />
+            <path d="m16 4-9.5 9.5" />
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" id="top">
+        <div class="shell hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="status-dot" aria-hidden="true"></span>
+              Android 10 and newer
+            </p>
+            <h1>Walk. Run.<br /><span>Repeat.</span></h1>
+            <p class="hero-intro">
+              A focused interval timer for switching between walking and running.
+              Set your rhythm, start the workout, and keep moving.
+            </p>
+
+            <section
+              class="release-card"
+              id="release-panel"
+              data-state="loading"
+              aria-labelledby="release-version"
+              aria-busy="true"
+            >
+              <div class="release-heading">
+                <div>
+                  <p class="release-label">Newest GitHub release</p>
+                  <h2 id="release-version">Checking GitHub…</h2>
+                </div>
+                <span class="release-badge" id="release-badge">Live</span>
+              </div>
+
+              <p class="release-message" id="release-message" aria-live="polite">
+                Looking for the newest Android package.
+              </p>
+
+              <dl class="release-meta" id="release-meta" hidden>
+                <div>
+                  <dt>Published</dt>
+                  <dd id="release-date">—</dd>
+                </div>
+                <div>
+                  <dt>APK size</dt>
+                  <dd id="release-size">—</dd>
+                </div>
+              </dl>
+
+              <div class="release-actions">
+                <a
+                  class="button button-primary"
+                  id="download-button"
+                  aria-disabled="true"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3v12" />
+                    <path d="m7 10 5 5 5-5" />
+                    <path d="M5 21h14" />
+                  </svg>
+                  <span>Checking latest version…</span>
+                </a>
+                <a
+                  class="button button-secondary"
+                  id="releases-button"
+                  data-releases-link
+                  href="#"
+                >
+                  View releases
+                </a>
+                <button class="text-button" id="retry-button" type="button" hidden>
+                  Try again
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div class="phone-stage" aria-label="Preview of the Run/Walk Timer app">
+            <div class="orbit orbit-one" aria-hidden="true"></div>
+            <div class="orbit orbit-two" aria-hidden="true"></div>
+            <div class="phone">
+              <div class="phone-speaker" aria-hidden="true"></div>
+              <div class="phone-screen">
+                <div class="phone-title-row">
+                  <span>Run/Walk Timer</span>
+                  <span class="phone-sound" aria-hidden="true">♪</span>
+                </div>
+
+                <div class="mode-card">
+                  <p>Current mode</p>
+                  <strong>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="13" cy="4" r="2" />
+                      <path d="m10 21 1-6-3-2 2-5 4 2 3 3" />
+                      <path d="m14 10-2 5 5 2 2 4" />
+                    </svg>
+                    Walking
+                  </strong>
+                  <span class="mode-time">00:42</span>
+                  <small>Current interval left</small>
+                  <div class="overall-time">
+                    <span>Overall time left</span>
+                    <b>00:18:42</b>
+                  </div>
+                </div>
+
+                <div class="progress-card">
+                  <div><b>Cycle 2 of 5</b><span>Next: Run</span></div>
+                  <p>Current walk <b>30%</b></p>
+                  <span class="progress-track"><i></i></span>
+                  <p>Workout <b>7%</b></p>
+                  <span class="progress-track workout"><i></i></span>
+                </div>
+
+                <div class="phone-controls" aria-hidden="true">
+                  <span>Pause</span>
+                  <span>Stop</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="shell">
+          <div class="section-heading">
+            <p class="eyebrow">Built for a simple workout</p>
+            <h2>Everything you need.<br />Nothing in your way.</h2>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card feature-walk">
+              <span class="feature-number">01</span>
+              <h3>Your pace, your intervals</h3>
+              <p>Set separate walking and running times down to the second.</p>
+            </article>
+            <article class="feature-card feature-run">
+              <span class="feature-number">02</span>
+              <h3>Stop your way</h3>
+              <p>Finish after a total workout time or a chosen number of cycles.</p>
+            </article>
+            <article class="feature-card feature-blue">
+              <span class="feature-number">03</span>
+              <h3>Controls stay with you</h3>
+              <p>Pause, resume, or stop from the ongoing Android notification.</p>
+            </article>
+            <article class="feature-card feature-neutral">
+              <span class="feature-number">04</span>
+              <h3>Hear the change</h3>
+              <p>Sound and vibration cues mark each new phase. Sound is optional.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section install-section" id="install">
+        <div class="shell install-grid">
+          <div class="section-heading install-heading">
+            <p class="eyebrow">Install in a minute</p>
+            <h2>From GitHub<br />to your phone.</h2>
+            <p>
+              The APK comes directly from the latest published GitHub Release.
+              No account is required.
+            </p>
+          </div>
+
+          <ol class="steps">
+            <li>
+              <span>1</span>
+              <div><h3>Download the APK</h3><p>Use the latest-version button above.</p></div>
+            </li>
+            <li>
+              <span>2</span>
+              <div><h3>Open the downloaded file</h3><p>Find it in your browser or Downloads folder.</p></div>
+            </li>
+            <li>
+              <span>3</span>
+              <div><h3>Allow this source if asked</h3><p>Android may request permission to install this APK.</p></div>
+            </li>
+            <li>
+              <span>4</span>
+              <div><h3>Install and start moving</h3><p>Allow notifications for background workout controls.</p></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="requirements">
+        <div class="shell requirements-inner">
+          <div>
+            <p class="eyebrow">Requirements</p>
+            <h2>Ready for your Android phone.</h2>
+          </div>
+          <ul>
+            <li><span aria-hidden="true">✓</span> Android 10 or newer</li>
+            <li><span aria-hidden="true">✓</span> No account required</li>
+            <li><span aria-hidden="true">✓</span> Notifications recommended</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div>
+          <a class="brand footer-brand" href="#top">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><path d="M12 16h20l-5-5" /><path d="m32 16-5 5" /><path d="M36 32H16l5-5" /><path d="m16 32 5 5" /></svg>
+            </span>
+            <span>Run/Walk Timer</span>
+          </a>
+          <p>Simple intervals for steady progress.</p>
+        </div>
+        <nav aria-label="Footer navigation">
+          <a data-repository-link href="#">Repository</a>
+          <a data-releases-link href="#">Releases</a>
+          <a href="#install">Installation</a>
+        </nav>
+        <p class="copyright">© <span id="current-year"></span> Run/Walk Timer</p>
+      </div>
+    </footer>
+  </body>
+</html>

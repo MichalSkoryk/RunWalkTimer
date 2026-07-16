@@ -1,0 +1,6 @@
+# Copy this file to key.properties and replace every placeholder.
+# Keep key.properties and the keystore private.
+storePassword=<keystore-password>
+keyPassword=<key-password>
+keyAlias=run-walk-timer
+storeFile=C:\\Users\\your-name\\run_walk_timer_release.jks
