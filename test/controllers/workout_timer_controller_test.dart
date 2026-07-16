@@ -108,6 +108,28 @@ void main() {
     expect(state.notificationsEnabled, isFalse);
   });
 
+  test('native completion becomes terminal without sending an extra stop', () {
+    final bridge = _FakeBackgroundBridge();
+    final controller = WorkoutTimerController(backgroundBridge: bridge);
+
+    bridge.emit(
+      BackgroundWorkoutState(
+        status: BackgroundWorkoutStatus.complete,
+        plan: plan,
+        elapsed: plan.targetDuration,
+        soundEnabled: true,
+        sessionId: 150,
+      ),
+    );
+
+    expect(controller.status, WorkoutStatus.complete);
+    expect(controller.isInProgress, isFalse);
+    expect(controller.snapshot!.displayRemaining, Duration.zero);
+    expect(controller.snapshot!.totalRemaining, Duration.zero);
+    expect(bridge.stopCalls, 0);
+    controller.dispose();
+  });
+
   test('stop clears a completed native session', () async {
     final bridge = _FakeBackgroundBridge();
     final controller = WorkoutTimerController(backgroundBridge: bridge);

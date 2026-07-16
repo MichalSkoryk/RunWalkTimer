@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 - 2026-07-16
+
+- Replaced short device-dependent beeps with clearer normalized audio cues.
+- Briefly lowers competing media audio while a workout cue is playing.
+- Stops the foreground workout service when the target duration is reached.
+- Removes the ongoing notification immediately when a workout completes.
+
 ## 1.0.1 - 2026-07-16
 
 - Replaced the stock Flutter launcher artwork with the Tabler Run icon.

@@ -3,11 +3,7 @@ package com.intervalrunner.run_walk_timer
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
@@ -15,13 +11,13 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val handler = Handler(Looper.getMainLooper())
-    private var toneGenerator: ToneGenerator? = null
+    private var cuePlayer: WorkoutCuePlayer? = null
     private var deviceChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 85)
+        cuePlayer?.release()
+        cuePlayer = WorkoutCuePlayer(this)
 
         deviceChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -114,6 +110,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "getWorkoutServiceState" -> {
                     val state = WorkoutTimerService.currentState(this)
+                    WorkoutTimerService.removeNotificationIfInactive(this, state)
                     restoreWorkoutServiceIfNeeded(state)
                     result.success(state)
                 }
@@ -174,43 +171,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun playCue(cue: String?) {
-        handler.removeCallbacksAndMessages(null)
-        when (cue) {
-            "walk" -> toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 180)
-            "run" -> {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, 120)
-                handler.postDelayed(
-                    {
-                        toneGenerator?.startTone(
-                            ToneGenerator.TONE_PROP_BEEP2,
-                            120,
-                        )
-                    },
-                    190,
-                )
-            }
-            "complete" -> {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 150)
-                handler.postDelayed(
-                    {
-                        toneGenerator?.startTone(
-                            ToneGenerator.TONE_PROP_ACK,
-                            150,
-                        )
-                    },
-                    210,
-                )
-                handler.postDelayed(
-                    {
-                        toneGenerator?.startTone(
-                            ToneGenerator.TONE_PROP_ACK,
-                            240,
-                        )
-                    },
-                    420,
-                )
-            }
-        }
+        cuePlayer?.play(cue)
     }
 
     private fun setKeepScreenOn(enabled: Boolean) {
@@ -222,9 +183,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null)
-        toneGenerator?.release()
-        toneGenerator = null
+        cuePlayer?.release()
+        cuePlayer = null
         super.onDestroy()
     }
 

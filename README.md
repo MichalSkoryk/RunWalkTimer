@@ -30,7 +30,8 @@ stop it in either of two ways:
   overall countdowns, and Pause/Resume and Stop actions.
 - A live Sound cues switch that mutes transition and completion tones while
   leaving vibration feedback enabled.
-- Different Android tone and vibration patterns for Walk, Run, and completion.
+- Clear normalized audio and vibration patterns for Walk, Run, and completion;
+  competing media briefly ducks so cues remain audible.
 - Drift-resistant timing based on active elapsed time, rather than subtracting
   one second per callback.
 - Screen-awake behavior while a workout is running.
@@ -189,6 +190,11 @@ drawer. If permission is denied, Android may show the active workout only in its
 system Task Manager rather than the notification drawer. The app shows a notice
 with a shortcut to its Android notification settings when background controls
 are unavailable.
+
+When the selected duration or interval count is reached, the workout enters
+its completed state, releases its wake lock, stops the foreground service, and
+removes the ongoing notification. The completed result remains visible when
+the app is open so the workout can be reviewed or restarted.
 
 If Android's **Active apps > Stop** control, a reboot, or an app update interrupts
 the foreground service, the next app launch restores the workout safely as

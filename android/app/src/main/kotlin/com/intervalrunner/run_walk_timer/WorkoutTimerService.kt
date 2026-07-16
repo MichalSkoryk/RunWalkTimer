@@ -12,8 +12,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.drawable.Icon
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -30,9 +28,8 @@ import kotlin.math.min
 
 class WorkoutTimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
-    private val cueHandler = Handler(Looper.getMainLooper())
     private lateinit var notificationManager: NotificationManager
-    private var toneGenerator: ToneGenerator? = null
+    private lateinit var cuePlayer: WorkoutCuePlayer
     private var wakeLock: PowerManager.WakeLock? = null
 
     private var status = STATUS_IDLE
@@ -68,7 +65,7 @@ class WorkoutTimerService : Service() {
         super.onCreate()
         serviceAlive = true
         notificationManager = getSystemService(NotificationManager::class.java)
-        toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 85)
+        cuePlayer = WorkoutCuePlayer(this)
         createNotificationChannel()
         loadState()
     }
@@ -106,8 +103,7 @@ class WorkoutTimerService : Service() {
 
     private fun startNewSession(intent: Intent) {
         handler.removeCallbacksAndMessages(null)
-        cueHandler.removeCallbacksAndMessages(null)
-        toneGenerator?.stopTone()
+        cuePlayer.stop()
 
         walkMs = intent.getLongExtra(EXTRA_WALK_MS, 0L)
         runMs = intent.getLongExtra(EXTRA_RUN_MS, 0L)
@@ -164,6 +160,8 @@ class WorkoutTimerService : Service() {
             }
             emitState(elapsed)
         } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            notificationManager.cancel(NOTIFICATION_ID)
             stopSelf()
         }
     }
@@ -225,8 +223,7 @@ class WorkoutTimerService : Service() {
         runningAnchorWallMs = 0L
         checkpointElapsedMs = 0L
         handler.removeCallbacksAndMessages(null)
-        cueHandler.removeCallbacksAndMessages(null)
-        toneGenerator?.stopTone()
+        cuePlayer.stop()
         releaseWakeLock()
         persistState()
         emitState(0L)
@@ -238,8 +235,7 @@ class WorkoutTimerService : Service() {
     private fun setSound(enabled: Boolean) {
         soundEnabled = enabled
         if (!enabled) {
-            cueHandler.removeCallbacksAndMessages(null)
-            toneGenerator?.stopTone()
+            cuePlayer.stop()
         }
         persistState()
         if (status == STATUS_RUNNING || status == STATUS_PAUSED) {
@@ -293,14 +289,13 @@ class WorkoutTimerService : Service() {
         persistState()
         playCompletionCue()
 
-        val notification = buildCompletionNotification()
-        stopForeground(STOP_FOREGROUND_DETACH)
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        notificationManager.cancel(NOTIFICATION_ID)
         emitState(targetMs)
         if (soundEnabled) {
-            cueHandler.postDelayed(
+            handler.postDelayed(
                 { stopSelf() },
-                COMPLETION_CUE_RELEASE_DELAY_MS,
+                COMPLETION_SERVICE_RELEASE_DELAY_MS,
             )
         } else {
             stopSelf()
@@ -404,21 +399,6 @@ class WorkoutTimerService : Service() {
         )
 
         return builder.build()
-    }
-
-    private fun buildCompletionNotification(): Notification {
-        val content = "Active time " + formatDuration(targetMs, true)
-        return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_interval)
-            .setColor(Color.rgb(35, 91, 131))
-            .setContentTitle("Workout complete")
-            .setContentText(content)
-            .setCategory(Notification.CATEGORY_SERVICE)
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setOnlyAlertOnce(true)
-            .setAutoCancel(true)
-            .setContentIntent(openAppIntent())
-            .build()
     }
 
     private fun notificationAction(
@@ -527,30 +507,16 @@ class WorkoutTimerService : Service() {
 
     private fun playPhaseCue(isWalking: Boolean) {
         if (soundEnabled) {
-            if (isWalking) {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 180)
-            } else {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, 120)
-                cueHandler.postDelayed(
-                    { toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, 120) },
-                    190,
-                )
-            }
+            cuePlayer.play(
+                if (isWalking) WorkoutCuePlayer.CUE_WALK else WorkoutCuePlayer.CUE_RUN,
+            )
         }
         vibrate(if (isWalking) longArrayOf(0L, 100L) else longArrayOf(0L, 80L, 80L, 80L))
     }
 
     private fun playCompletionCue() {
         if (soundEnabled) {
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 150)
-            cueHandler.postDelayed(
-                { toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 150) },
-                210,
-            )
-            cueHandler.postDelayed(
-                { toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 240) },
-                420,
-            )
+            cuePlayer.play(WorkoutCuePlayer.CUE_COMPLETE)
         }
         vibrate(longArrayOf(0L, 350L))
     }
@@ -636,10 +602,8 @@ class WorkoutTimerService : Service() {
     override fun onDestroy() {
         serviceAlive = false
         handler.removeCallbacksAndMessages(null)
-        cueHandler.removeCallbacksAndMessages(null)
         releaseWakeLock()
-        toneGenerator?.release()
-        toneGenerator = null
+        cuePlayer.release()
         super.onDestroy()
     }
 
@@ -694,12 +658,27 @@ class WorkoutTimerService : Service() {
         private const val REQUEST_STOP = 4105
         private const val TICK_MS = 250L
         private const val CHECKPOINT_INTERVAL_MS = 5_000L
-        private const val COMPLETION_CUE_RELEASE_DELAY_MS = 750L
+        private const val COMPLETION_SERVICE_RELEASE_DELAY_MS =
+            WorkoutCuePlayer.COMPLETION_DURATION_MS + 150L
 
         @Volatile
         private var serviceAlive = false
 
         fun isAlive(): Boolean = serviceAlive
+
+        fun removeNotificationIfInactive(
+            context: Context,
+            state: HashMap<String, Any?>?,
+        ) {
+            val savedStatus = state?.get("status") as? String
+            if (!serviceAlive &&
+                savedStatus != STATUS_RUNNING &&
+                savedStatus != STATUS_PAUSED
+            ) {
+                context.getSystemService(NotificationManager::class.java)
+                    .cancel(NOTIFICATION_ID)
+            }
+        }
 
         fun currentState(context: Context): HashMap<String, Any?>? {
             val preferences = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE)
