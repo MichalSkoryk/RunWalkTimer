@@ -4,6 +4,9 @@ A focused Flutter interval timer for Android 10 and newer.
 
 [Download the newest APK][latest-release] · [Open the download website][website]
 
+The launcher artwork uses the MIT-licensed Tabler Run icon. Attribution and
+the complete license text are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
 The workout always starts with **Walk**, then alternates with **Run**. You can
 stop it in either of two ways:
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 - 2026-07-16
+
+- Replaced the stock Flutter launcher artwork with the Tabler Run icon.
+- Added adaptive, round, monochrome, and legacy Android launcher variants.
+- Updated the download website favicon and brand mark to match the app.
+
 ## 1.0.0 - 2026-07-16
 
 - Added configurable Walk and Run countdown intervals.

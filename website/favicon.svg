@@ -1,9 +1,10 @@
+<!-- Tabler Run icon, MIT License: see ../THIRD_PARTY_NOTICES.md -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="18" fill="#235b83" />
-  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
-    <path d="M14 22h31l-8-8" />
-    <path d="m45 22-8 8" />
-    <path d="M50 42H19l8-8" />
-    <path d="m19 42 8 8" />
+  <g transform="translate(5.6 3.2) scale(2.4)" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3">
+    <path d="M11.007 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+    <path d="M4 17l5 1l.75 -1.5" />
+    <path d="M15 21v-4l-4 -3l1 -6" />
+    <path d="M7 12v-3l5 -1l3 3l3 1" />
   </g>
 </svg>
