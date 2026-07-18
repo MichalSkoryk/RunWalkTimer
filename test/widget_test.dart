@@ -10,6 +10,14 @@ void main() {
     await tester.pumpWidget(const RunWalkTimerApp());
 
     expect(find.text('Run/Walk Timer'), findsOneWidget);
+    final supportButton = find.byKey(
+      const ValueKey('developer-support-button'),
+    );
+    expect(supportButton, findsOneWidget);
+    expect(
+      find.ancestor(of: supportButton, matching: find.byType(AppBar)),
+      findsOneWidget,
+    );
     expect(find.text('Walk duration'), findsOneWidget);
     expect(find.text('Run duration'), findsOneWidget);
     expect(find.byKey(const ValueKey('interval-count-input')), findsOneWidget);

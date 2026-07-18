@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3 - 2026-07-18
+
+- Added an optional developer-support link to buycoffee.to.
+- Added a matching support section to the download website.
+
 ## 1.0.2 - 2026-07-16
 
 - Replaced short device-dependent beeps with clearer normalized audio cues.

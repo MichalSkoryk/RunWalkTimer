@@ -801,6 +801,46 @@ h1 span {
   font-weight: 900;
 }
 
+.support-section {
+  padding: 64px 0;
+  background: var(--paper);
+}
+
+.support-inner {
+  display: flex;
+  gap: 48px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 34px 38px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.support-inner .eyebrow,
+.support-inner h2,
+.support-inner p {
+  margin: 0;
+}
+
+.support-inner h2 {
+  margin-top: 8px;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.support-inner p:last-child {
+  max-width: 650px;
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.support-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .site-footer {
   padding: 46px 0;
   background: var(--surface);
@@ -948,6 +988,16 @@ h1 span {
     align-items: start;
   }
 
+  .support-inner {
+    display: grid;
+    gap: 24px;
+    padding: 28px;
+  }
+
+  .support-button {
+    width: 100%;
+  }
+
   .copyright {
     grid-column: auto;
   }
@@ -977,6 +1027,15 @@ h1 span {
 
   .release-card {
     padding: 20px;
+  }
+
+  .support-section {
+    padding: 48px 0;
+  }
+
+  .support-inner {
+    padding: 24px 20px;
+    border-radius: var(--radius-md);
   }
 
   .release-actions,

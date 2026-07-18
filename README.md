@@ -37,6 +37,8 @@ stop it in either of two ways:
 - Screen-awake behavior while a workout is running.
 - Inline input validation, phase and workout progress, and TalkBack-friendly
   labels.
+- An optional developer-support link that opens buycoffee.to in the default
+  browser. Tips do not unlock features or change the app experience.
 - Unit and widget tests.
 
 ## Project structure
@@ -174,7 +176,8 @@ signed with the same key.
 
 The download website is deployed from `website/` by the GitHub Pages workflow
 in `.github/workflows/pages.yml`. It discovers the newest published GitHub
-Release dynamically and links directly to its non-debug APK asset.
+Release dynamically, links directly to its non-debug APK asset, and provides an
+optional [developer-support link][support].
 
 ## Background workouts
 
@@ -205,3 +208,4 @@ saved checkpoint instead of displaying a timer with no service behind it.
 [oem-driver]: https://developer.android.com/studio/run/oem-usb
 [latest-release]: https://github.com/MichalSkoryk/RunWalkTimer/releases/latest
 [website]: https://michalskoryk.github.io/RunWalkTimer/
+[support]: https://buycoffee.to/michal-skoryk

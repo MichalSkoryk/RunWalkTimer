@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../controllers/workout_timer_controller.dart';
 import '../models/workout_plan.dart';
 import '../widgets/current_phase_card.dart';
+import '../widgets/developer_support_button.dart';
 import '../widgets/notification_permission_notice.dart';
 import '../widgets/timer_controls.dart';
 import '../widgets/workout_progress_card.dart';
@@ -236,8 +237,16 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
           appBar: AppBar(
             title: const Text(
               'Run/Walk Timer',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
+            actions: const [
+              Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: DeveloperSupportButton(),
+              ),
+            ],
           ),
           body: SafeArea(
             child: Center(
