@@ -18,8 +18,17 @@ void main() {
       find.ancestor(of: supportButton, matching: find.byType(AppBar)),
       findsOneWidget,
     );
-    expect(find.text('Walk duration'), findsOneWidget);
-    expect(find.text('Run duration'), findsOneWidget);
+    final settingsButton = find.byKey(const ValueKey('sound-settings-button'));
+    expect(
+      tester.getCenter(supportButton).dx,
+      lessThan(tester.getCenter(settingsButton).dx),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('workout-setup-card'))).height,
+      lessThan(650),
+    );
+    expect(find.text('Walk'), findsOneWidget);
+    expect(find.text('Run'), findsOneWidget);
     expect(find.byKey(const ValueKey('walk-duration')), findsOneWidget);
     expect(find.byKey(const ValueKey('run-duration')), findsOneWidget);
     expect(find.byKey(const ValueKey('walk-minutes')), findsNothing);
@@ -28,6 +37,7 @@ void main() {
       find.byKey(const ValueKey('walk-metronome-checkbox')),
       findsOneWidget,
     );
+    expect(find.text('BPM'), findsNWidgets(2));
     expect(find.byKey(const ValueKey('walk-metronome-bpm')), findsNothing);
     expect(find.byKey(const ValueKey('interval-count-input')), findsOneWidget);
     expect(find.byKey(const ValueKey('total')), findsNothing);
@@ -38,6 +48,30 @@ void main() {
     expect(find.byKey(const ValueKey('total')), findsOneWidget);
     expect(find.byKey(const ValueKey('total-duration')), findsOneWidget);
     expect(find.byKey(const ValueKey('interval-count-input')), findsNothing);
+  });
+
+  testWidgets('setup sound shortcut opens editable sound settings', (
+    tester,
+  ) async {
+    _useTallTestWindow(tester);
+    await tester.pumpWidget(const RunWalkTimerApp());
+
+    await tester.tap(find.byKey(const ValueKey('setup-sound-settings-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sound settings'), findsOneWidget);
+    expect(
+      find.text('Stop the workout to change or preview sounds.'),
+      findsNothing,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('walk-sound-setting-preview')),
+          )
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('metronome reveals default BPM and validates 70 to 180', (
@@ -53,6 +87,28 @@ void main() {
     final bpm = find.byKey(const ValueKey('walk-metronome-bpm'));
     expect(bpm, findsOneWidget);
     expect(tester.widget<TextField>(bpm).controller?.text, '100');
+    final decrease = find.byKey(const ValueKey('walk-bpm-decrease'));
+    final increase = find.byKey(const ValueKey('walk-bpm-increase'));
+    expect(decrease, findsOneWidget);
+    expect(increase, findsOneWidget);
+
+    await tester.tap(increase);
+    await tester.pump();
+    expect(tester.widget<TextField>(bpm).controller?.text, '101');
+
+    await tester.tap(decrease);
+    await tester.pump();
+    expect(tester.widget<TextField>(bpm).controller?.text, '100');
+
+    await tester.enterText(bpm, '70');
+    await tester.pump();
+    expect(tester.widget<IconButton>(decrease).onPressed, isNull);
+    expect(tester.widget<IconButton>(increase).onPressed, isNotNull);
+
+    await tester.enterText(bpm, '180');
+    await tester.pump();
+    expect(tester.widget<IconButton>(decrease).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(increase).onPressed, isNull);
 
     await tester.enterText(bpm, '69');
     await tester.pump();
@@ -91,7 +147,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sound settings'), findsOneWidget);
-    expect(find.text('Sound choices are locked'), findsOneWidget);
+    expect(
+      find.text('Stop the workout to change or preview sounds.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('main setup handles a narrow enlarged-text layout', (
