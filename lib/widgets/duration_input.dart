@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import 'numeric_field.dart';
+import '../core/duration_input_format.dart';
 
 class DurationInput extends StatelessWidget {
   const DurationInput({
@@ -8,11 +9,10 @@ class DurationInput extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.accentColor,
-    required this.minutesController,
-    required this.secondsController,
+    required this.controller,
+    required this.format,
     required this.enabled,
     required this.onChanged,
-    this.hoursController,
     this.errorText,
     super.key,
   });
@@ -21,12 +21,29 @@ class DurationInput extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color accentColor;
-  final TextEditingController? hoursController;
-  final TextEditingController minutesController;
-  final TextEditingController secondsController;
+  final TextEditingController controller;
+  final DurationInputFormat format;
   final bool enabled;
   final VoidCallback onChanged;
   final String? errorText;
+
+  void _normalize() {
+    final duration = parseDurationInput(controller.text, format);
+    if (duration == null) {
+      return;
+    }
+
+    final normalized = formatDurationInput(duration, format);
+    if (controller.text == normalized) {
+      return;
+    }
+
+    controller.value = TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: normalized.length),
+    );
+    onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,44 +78,40 @@ class DurationInput extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (hoursController != null) ...[
-                Expanded(
-                  child: NumericField(
-                    fieldKey: ValueKey('${_keyPrefix(inputKey)}-hours'),
-                    controller: hoursController!,
-                    label: 'Hours',
-                    semanticLabel: '$title hours',
-                    enabled: enabled,
-                    onChanged: (_) => onChanged(),
-                  ),
-                ),
-                const _TimeSeparator(),
-              ],
-              Expanded(
-                child: NumericField(
-                  fieldKey: ValueKey('${_keyPrefix(inputKey)}-minutes'),
-                  controller: minutesController,
-                  label: 'Minutes',
-                  semanticLabel: '$title minutes',
-                  enabled: enabled,
-                  onChanged: (_) => onChanged(),
-                ),
-              ),
-              const _TimeSeparator(),
-              Expanded(
-                child: NumericField(
-                  fieldKey: ValueKey('${_keyPrefix(inputKey)}-seconds'),
-                  controller: secondsController,
-                  label: 'Seconds',
-                  semanticLabel: '$title seconds',
-                  enabled: enabled,
-                  onChanged: (_) => onChanged(),
+          Focus(
+            onFocusChange: (hasFocus) {
+              if (!hasFocus) {
+                _normalize();
+              }
+            },
+            child: Semantics(
+              textField: true,
+              label: '$title, ${format.label}',
+              child: TextField(
+                key: ValueKey('${_keyPrefix(inputKey)}-duration'),
+                controller: controller,
+                enabled: enabled,
+                keyboardType: TextInputType.datetime,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                enableSuggestions: false,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+                ],
+                onChanged: (_) => onChanged(),
+                onEditingComplete: () {
+                  _normalize();
+                  FocusManager.instance.primaryFocus?.nextFocus();
+                },
+                decoration: InputDecoration(
+                  labelText: format.label,
+                  hintText: switch (format) {
+                    DurationInputFormat.minutesSeconds => '01:30',
+                    DurationInputFormat.hoursMinutesSeconds => '00:20:00',
+                  },
                 ),
               ),
-            ],
+            ),
           ),
           if (errorText != null) ...[
             const SizedBox(height: 8),
@@ -119,22 +132,5 @@ class DurationInput extends StatelessWidget {
       return key.value;
     }
     return 'duration';
-  }
-}
-
-class _TimeSeparator extends StatelessWidget {
-  const _TimeSeparator();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(7, 18, 7, 0),
-      child: ExcludeSemantics(
-        child: Text(
-          ':',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../controllers/workout_timer_controller.dart';
+import '../core/duration_input_format.dart';
 import '../models/workout_plan.dart';
 import '../widgets/current_phase_card.dart';
 import '../widgets/developer_support_button.dart';
@@ -19,13 +20,9 @@ class TimerScreen extends StatefulWidget {
 }
 
 class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
-  final _walkMinutes = TextEditingController(text: '1');
-  final _walkSeconds = TextEditingController(text: '00');
-  final _runMinutes = TextEditingController(text: '2');
-  final _runSeconds = TextEditingController(text: '00');
-  final _totalHours = TextEditingController(text: '0');
-  final _totalMinutes = TextEditingController(text: '20');
-  final _totalSeconds = TextEditingController(text: '00');
+  final _walkDuration = TextEditingController(text: '01:00');
+  final _runDuration = TextEditingController(text: '02:00');
+  final _totalDuration = TextEditingController(text: '00:20:00');
   final _intervalCount = TextEditingController(text: '5');
 
   late final WorkoutTimerController _timerController;
@@ -52,23 +49,22 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       return;
     }
 
-    _walkMinutes.text = plan.walkDuration.inMinutes.toString();
-    _walkSeconds.text = (plan.walkDuration.inSeconds % 60).toString().padLeft(
-      2,
-      '0',
+    _walkDuration.text = formatDurationInput(
+      plan.walkDuration,
+      DurationInputFormat.minutesSeconds,
     );
-    _runMinutes.text = plan.runDuration.inMinutes.toString();
-    _runSeconds.text = (plan.runDuration.inSeconds % 60).toString().padLeft(
-      2,
-      '0',
+    _runDuration.text = formatDurationInput(
+      plan.runDuration,
+      DurationInputFormat.minutesSeconds,
     );
     _limitMode = plan.limitMode;
 
     if (plan.limitMode == WorkoutLimitMode.time) {
       final total = plan.timeLimit!;
-      _totalHours.text = total.inHours.toString();
-      _totalMinutes.text = (total.inMinutes % 60).toString().padLeft(2, '0');
-      _totalSeconds.text = (total.inSeconds % 60).toString().padLeft(2, '0');
+      _totalDuration.text = formatDurationInput(
+        total,
+        DurationInputFormat.hoursMinutesSeconds,
+      );
     } else {
       _intervalCount.text = plan.intervalCount.toString();
     }
@@ -81,13 +77,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _timerController.dispose();
     for (final controller in [
-      _walkMinutes,
-      _walkSeconds,
-      _runMinutes,
-      _runSeconds,
-      _totalHours,
-      _totalMinutes,
-      _totalSeconds,
+      _walkDuration,
+      _runDuration,
+      _totalDuration,
       _intervalCount,
     ]) {
       controller.dispose();
@@ -95,11 +87,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  String? get _walkError =>
-      _phaseDurationError(_walkMinutes.text, _walkSeconds.text);
+  String? get _walkError => _phaseDurationError(_walkDuration.text);
 
-  String? get _runError =>
-      _phaseDurationError(_runMinutes.text, _runSeconds.text);
+  String? get _runError => _phaseDurationError(_runDuration.text);
 
   String? get _goalError {
     if (_limitMode == WorkoutLimitMode.intervals) {
@@ -110,16 +100,14 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       return null;
     }
 
-    final hours = int.tryParse(_totalHours.text);
-    final minutes = int.tryParse(_totalMinutes.text);
-    final seconds = int.tryParse(_totalSeconds.text);
-    if (hours == null || minutes == null || seconds == null) {
-      return 'Fill in hours, minutes, and seconds.';
+    final duration = parseDurationInput(
+      _totalDuration.text,
+      DurationInputFormat.hoursMinutesSeconds,
+    );
+    if (duration == null) {
+      return 'Enter time as HH:MM:SS. Minutes and seconds must be 00–59.';
     }
-    if (minutes > 59 || seconds > 59) {
-      return 'Minutes and seconds must each be between 0 and 59.';
-    }
-    if (hours == 0 && minutes == 0 && seconds == 0) {
+    if (duration == Duration.zero) {
       return 'Enter a total time of at least 1 second.';
     }
     return null;
@@ -130,44 +118,45 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       return null;
     }
 
-    final walk = Duration(
-      minutes: int.parse(_walkMinutes.text),
-      seconds: int.parse(_walkSeconds.text),
+    final walk = parseDurationInput(
+      _walkDuration.text,
+      DurationInputFormat.minutesSeconds,
     );
-    final run = Duration(
-      minutes: int.parse(_runMinutes.text),
-      seconds: int.parse(_runSeconds.text),
+    final run = parseDurationInput(
+      _runDuration.text,
+      DurationInputFormat.minutesSeconds,
     );
+    final timeLimit = _limitMode == WorkoutLimitMode.time
+        ? parseDurationInput(
+            _totalDuration.text,
+            DurationInputFormat.hoursMinutesSeconds,
+          )
+        : null;
 
     if (_limitMode == WorkoutLimitMode.intervals) {
       return WorkoutPlan.intervals(
-        walkDuration: walk,
-        runDuration: run,
+        walkDuration: walk!,
+        runDuration: run!,
         intervalCount: int.parse(_intervalCount.text),
       );
     }
 
     return WorkoutPlan.timed(
-      walkDuration: walk,
-      runDuration: run,
-      timeLimit: Duration(
-        hours: int.parse(_totalHours.text),
-        minutes: int.parse(_totalMinutes.text),
-        seconds: int.parse(_totalSeconds.text),
-      ),
+      walkDuration: walk!,
+      runDuration: run!,
+      timeLimit: timeLimit!,
     );
   }
 
-  String? _phaseDurationError(String minutesText, String secondsText) {
-    final minutes = int.tryParse(minutesText);
-    final seconds = int.tryParse(secondsText);
-    if (minutes == null || seconds == null) {
-      return 'Fill in minutes and seconds.';
+  String? _phaseDurationError(String value) {
+    final duration = parseDurationInput(
+      value,
+      DurationInputFormat.minutesSeconds,
+    );
+    if (duration == null) {
+      return 'Enter time as MM:SS. Seconds must be 00–59.';
     }
-    if (seconds > 59) {
-      return 'Seconds must be between 0 and 59.';
-    }
-    if (minutes == 0 && seconds == 0) {
+    if (duration == Duration.zero) {
       return 'Enter a duration of at least 1 second.';
     }
     return null;
@@ -285,13 +274,9 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                     if (status != WorkoutStatus.running) ...[
                       const SizedBox(height: 14),
                       WorkoutSetupCard(
-                        walkMinutesController: _walkMinutes,
-                        walkSecondsController: _walkSeconds,
-                        runMinutesController: _runMinutes,
-                        runSecondsController: _runSeconds,
-                        totalHoursController: _totalHours,
-                        totalMinutesController: _totalMinutes,
-                        totalSecondsController: _totalSeconds,
+                        walkDurationController: _walkDuration,
+                        runDurationController: _runDuration,
+                        totalDurationController: _totalDuration,
                         intervalCountController: _intervalCount,
                         limitMode: _limitMode,
                         enabled: !isConfigurationLocked,
