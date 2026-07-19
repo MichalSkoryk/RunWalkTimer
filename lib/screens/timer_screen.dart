@@ -321,16 +321,19 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
             actions: [
-              IconButton(
-                key: const ValueKey('sound-settings-button'),
-                tooltip: 'Sound settings',
-                onPressed: () =>
-                    _openSoundSettings(readOnly: isConfigurationLocked),
-                icon: const Icon(Icons.settings_outlined),
-              ),
               const Padding(
-                padding: EdgeInsets.only(right: 8),
+                padding: EdgeInsets.only(left: 2),
                 child: DeveloperSupportButton(),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  key: const ValueKey('sound-settings-button'),
+                  tooltip: 'Sound settings',
+                  onPressed: () =>
+                      _openSoundSettings(readOnly: isConfigurationLocked),
+                  icon: const Icon(Icons.settings_outlined),
+                ),
               ),
             ],
           ),
@@ -396,6 +399,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         onRunMetronomeChanged: (enabled) {
                           setState(() => _runMetronomeEnabled = enabled);
                         },
+                        onOpenSoundSettings: () =>
+                            _openSoundSettings(readOnly: isConfigurationLocked),
                       ),
                     ],
                     const SizedBox(height: 14),

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - Unreleased
+
+- Reworked Workout setup into compact phase and goal rows to reduce scrolling.
+- Reworked Sound settings into compact selectors with inline preview actions.
+- Kept Support immediately left of Settings and Settings at the far right.
+
 ## 1.1.0 - Unreleased
 
 - Combined each duration into one formatted MM:SS or HH:MM:SS input.

@@ -27,6 +27,8 @@ stop it in either of two ways:
   Walk/Run mode always visible.
 - A compact active-workout view that hides setup while running, keeps controls
   near the timers, and restores setup when paused or stopped.
+- A compact workout setup and Sound settings layout designed to minimize
+  scrolling on typical phone screens.
 - An ongoing Android notification with the current Walk/Run phase, interval and
   overall countdowns, and Pause/Resume and Stop actions.
 - A live Sound cues switch that mutes transition and completion tones while

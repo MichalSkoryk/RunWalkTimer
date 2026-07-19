@@ -33,10 +33,7 @@ void main() {
     expect(service.saved.single.walkCue, WalkCueSound.woodTone);
     expect(latest?.walkCue, WalkCueSound.woodTone);
 
-    final preview = find.descendant(
-      of: find.byKey(const ValueKey('walk-sound-setting')),
-      matching: find.widgetWithText(OutlinedButton, 'Preview'),
-    );
+    final preview = find.byKey(const ValueKey('walk-sound-setting-preview'));
     await tester.tap(preview);
     await tester.pump();
 
@@ -58,7 +55,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Sound choices are locked'), findsOneWidget);
+    expect(
+      find.text('Stop the workout to change or preview sounds.'),
+      findsOneWidget,
+    );
     final selector = tester.widget<DropdownButtonFormField<WalkCueSound>>(
       find.descendant(
         of: find.byKey(const ValueKey('walk-sound-setting')),
@@ -66,13 +66,8 @@ void main() {
       ),
     );
     expect(selector.onChanged, isNull);
-    final preview = tester.widget<OutlinedButton>(
-      find
-          .descendant(
-            of: find.byKey(const ValueKey('walk-sound-setting')),
-            matching: find.widgetWithText(OutlinedButton, 'Preview'),
-          )
-          .first,
+    final preview = tester.widget<IconButton>(
+      find.byKey(const ValueKey('walk-sound-setting-preview')),
     );
     expect(preview.onPressed, isNull);
   });
