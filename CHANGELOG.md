@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Combined each duration into one formatted MM:SS or HH:MM:SS input.
+
 ## 1.0.3 - 2026-07-18
 
 - Added an optional developer-support link to buycoffee.to.

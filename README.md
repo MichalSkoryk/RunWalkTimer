@@ -18,8 +18,8 @@ stop it in either of two ways:
 
 ## Included
 
-- Separate minute/second inputs for walking and running.
-- Total-time input in hours/minutes/seconds.
+- Single MM:SS inputs for walking and running durations.
+- Single HH:MM:SS input for the total workout time.
 - Cycle-count input validated as an integer of 1 or more.
 - Start, Pause, Resume, Restart, and Stop/reset behavior.
 - Simultaneous current-interval and overall-workout countdowns, with the active

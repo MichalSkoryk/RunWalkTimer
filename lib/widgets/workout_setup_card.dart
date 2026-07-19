@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/duration_input_format.dart';
 import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
 import 'duration_input.dart';
@@ -8,13 +9,9 @@ import 'numeric_field.dart';
 
 class WorkoutSetupCard extends StatelessWidget {
   const WorkoutSetupCard({
-    required this.walkMinutesController,
-    required this.walkSecondsController,
-    required this.runMinutesController,
-    required this.runSecondsController,
-    required this.totalHoursController,
-    required this.totalMinutesController,
-    required this.totalSecondsController,
+    required this.walkDurationController,
+    required this.runDurationController,
+    required this.totalDurationController,
     required this.intervalCountController,
     required this.limitMode,
     required this.enabled,
@@ -28,13 +25,9 @@ class WorkoutSetupCard extends StatelessWidget {
     super.key,
   });
 
-  final TextEditingController walkMinutesController;
-  final TextEditingController walkSecondsController;
-  final TextEditingController runMinutesController;
-  final TextEditingController runSecondsController;
-  final TextEditingController totalHoursController;
-  final TextEditingController totalMinutesController;
-  final TextEditingController totalSecondsController;
+  final TextEditingController walkDurationController;
+  final TextEditingController runDurationController;
+  final TextEditingController totalDurationController;
   final TextEditingController intervalCountController;
   final WorkoutLimitMode limitMode;
   final bool enabled;
@@ -73,8 +66,8 @@ class WorkoutSetupCard extends StatelessWidget {
               title: 'Walk duration',
               icon: Icons.directions_walk_rounded,
               accentColor: AppTheme.walkColor,
-              minutesController: walkMinutesController,
-              secondsController: walkSecondsController,
+              controller: walkDurationController,
+              format: DurationInputFormat.minutesSeconds,
               enabled: enabled,
               errorText: walkError,
               onChanged: onChanged,
@@ -85,8 +78,8 @@ class WorkoutSetupCard extends StatelessWidget {
               title: 'Run duration',
               icon: Icons.directions_run_rounded,
               accentColor: AppTheme.runColor,
-              minutesController: runMinutesController,
-              secondsController: runSecondsController,
+              controller: runDurationController,
+              format: DurationInputFormat.minutesSeconds,
               enabled: enabled,
               errorText: runError,
               onChanged: onChanged,
@@ -107,9 +100,8 @@ class WorkoutSetupCard extends StatelessWidget {
                       title: 'Total workout time',
                       icon: Icons.timer_outlined,
                       accentColor: Theme.of(context).colorScheme.primary,
-                      hoursController: totalHoursController,
-                      minutesController: totalMinutesController,
-                      secondsController: totalSecondsController,
+                      controller: totalDurationController,
+                      format: DurationInputFormat.hoursMinutesSeconds,
                       enabled: enabled,
                       errorText: goalError,
                       onChanged: onChanged,
