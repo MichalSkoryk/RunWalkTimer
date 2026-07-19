@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../models/background_workout_state.dart';
+import '../models/sound_settings.dart';
 import '../models/workout_plan.dart';
 
 class BackgroundWorkoutBridge {
@@ -15,6 +16,7 @@ class BackgroundWorkoutBridge {
   Future<bool> startSession({
     required WorkoutPlan plan,
     required bool soundEnabled,
+    required SoundSettings soundSettings,
   }) async {
     try {
       return await _channel
@@ -25,6 +27,11 @@ class BackgroundWorkoutBridge {
                 'limitMode': plan.limitMode.name,
                 'intervalCount': plan.intervalCount,
                 'soundEnabled': soundEnabled,
+                'walkMetronomeEnabled': plan.walkMetronome.enabled,
+                'walkBpm': plan.walkMetronome.bpm,
+                'runMetronomeEnabled': plan.runMetronome.enabled,
+                'runBpm': plan.runMetronome.bpm,
+                ...soundSettings.toMap(),
               }) ??
           false;
     } on MissingPluginException {

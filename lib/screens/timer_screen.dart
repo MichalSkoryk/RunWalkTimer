@@ -4,13 +4,17 @@ import 'package:flutter/material.dart';
 
 import '../controllers/workout_timer_controller.dart';
 import '../core/duration_input_format.dart';
+import '../models/metronome_config.dart';
+import '../models/sound_settings.dart';
 import '../models/workout_plan.dart';
+import '../services/sound_settings_service.dart';
 import '../widgets/current_phase_card.dart';
 import '../widgets/developer_support_button.dart';
 import '../widgets/notification_permission_notice.dart';
 import '../widgets/timer_controls.dart';
 import '../widgets/workout_progress_card.dart';
 import '../widgets/workout_setup_card.dart';
+import 'sound_settings_screen.dart';
 
 class TimerScreen extends StatefulWidget {
   const TimerScreen({super.key});
@@ -24,16 +28,34 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   final _runDuration = TextEditingController(text: '02:00');
   final _totalDuration = TextEditingController(text: '00:20:00');
   final _intervalCount = TextEditingController(text: '5');
+  final _walkBpm = TextEditingController(
+    text: MetronomeConfig.defaultWalkBpm.toString(),
+  );
+  final _runBpm = TextEditingController(
+    text: MetronomeConfig.defaultRunBpm.toString(),
+  );
 
   late final WorkoutTimerController _timerController;
+  final _soundSettingsService = const SoundSettingsService();
   WorkoutLimitMode _limitMode = WorkoutLimitMode.intervals;
+  SoundSettings _soundSettings = const SoundSettings.defaults();
+  bool _walkMetronomeEnabled = false;
+  bool _runMetronomeEnabled = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _timerController = WorkoutTimerController();
+    unawaited(_loadSoundSettings());
     unawaited(_restoreBackgroundWorkout());
+  }
+
+  Future<void> _loadSoundSettings() async {
+    final settings = await _soundSettingsService.load();
+    if (mounted) {
+      setState(() => _soundSettings = settings);
+    }
   }
 
   @override
@@ -58,6 +80,10 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       DurationInputFormat.minutesSeconds,
     );
     _limitMode = plan.limitMode;
+    _walkMetronomeEnabled = plan.walkMetronome.enabled;
+    _runMetronomeEnabled = plan.runMetronome.enabled;
+    _walkBpm.text = plan.walkMetronome.bpm.toString();
+    _runBpm.text = plan.runMetronome.bpm.toString();
 
     if (plan.limitMode == WorkoutLimitMode.time) {
       final total = plan.timeLimit!;
@@ -81,6 +107,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       _runDuration,
       _totalDuration,
       _intervalCount,
+      _walkBpm,
+      _runBpm,
     ]) {
       controller.dispose();
     }
@@ -90,6 +118,12 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   String? get _walkError => _phaseDurationError(_walkDuration.text);
 
   String? get _runError => _phaseDurationError(_runDuration.text);
+
+  String? get _walkMetronomeError =>
+      _metronomeError(enabled: _walkMetronomeEnabled, value: _walkBpm.text);
+
+  String? get _runMetronomeError =>
+      _metronomeError(enabled: _runMetronomeEnabled, value: _runBpm.text);
 
   String? get _goalError {
     if (_limitMode == WorkoutLimitMode.intervals) {
@@ -114,7 +148,11 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
   }
 
   WorkoutPlan? get _draftPlan {
-    if (_walkError != null || _runError != null || _goalError != null) {
+    if (_walkError != null ||
+        _runError != null ||
+        _goalError != null ||
+        _walkMetronomeError != null ||
+        _runMetronomeError != null) {
       return null;
     }
 
@@ -132,12 +170,22 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
             DurationInputFormat.hoursMinutesSeconds,
           )
         : null;
+    final walkMetronome = MetronomeConfig(
+      enabled: _walkMetronomeEnabled,
+      bpm: _validBpmOrDefault(_walkBpm.text, MetronomeConfig.defaultWalkBpm),
+    );
+    final runMetronome = MetronomeConfig(
+      enabled: _runMetronomeEnabled,
+      bpm: _validBpmOrDefault(_runBpm.text, MetronomeConfig.defaultRunBpm),
+    );
 
     if (_limitMode == WorkoutLimitMode.intervals) {
       return WorkoutPlan.intervals(
         walkDuration: walk!,
         runDuration: run!,
         intervalCount: int.parse(_intervalCount.text),
+        walkMetronome: walkMetronome,
+        runMetronome: runMetronome,
       );
     }
 
@@ -145,6 +193,8 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       walkDuration: walk!,
       runDuration: run!,
       timeLimit: timeLimit!,
+      walkMetronome: walkMetronome,
+      runMetronome: runMetronome,
     );
   }
 
@@ -160,6 +210,29 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
       return 'Enter a duration of at least 1 second.';
     }
     return null;
+  }
+
+  String? _metronomeError({required bool enabled, required String value}) {
+    if (!enabled) {
+      return null;
+    }
+    final bpm = int.tryParse(value);
+    if (bpm == null ||
+        bpm < MetronomeConfig.minBpm ||
+        bpm > MetronomeConfig.maxBpm) {
+      return 'Enter a BPM from 70 to 180.';
+    }
+    return null;
+  }
+
+  int _validBpmOrDefault(String value, int fallback) {
+    final bpm = int.tryParse(value);
+    if (bpm == null ||
+        bpm < MetronomeConfig.minBpm ||
+        bpm > MetronomeConfig.maxBpm) {
+      return fallback;
+    }
+    return bpm;
   }
 
   void _onConfigurationChanged() {
@@ -178,8 +251,25 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
 
     final plan = _draftPlan;
     if (plan != null) {
-      _timerController.start(plan);
+      _timerController.start(plan, soundSettings: _soundSettings);
     }
+  }
+
+  Future<void> _openSoundSettings({required bool readOnly}) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => SoundSettingsScreen(
+          initialSettings: _soundSettings,
+          readOnly: readOnly,
+          service: _soundSettingsService,
+          onSettingsChanged: (settings) {
+            if (mounted) {
+              setState(() => _soundSettings = settings);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _stop() async {
@@ -230,8 +320,15 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
-            actions: const [
-              Padding(
+            actions: [
+              IconButton(
+                key: const ValueKey('sound-settings-button'),
+                tooltip: 'Sound settings',
+                onPressed: () =>
+                    _openSoundSettings(readOnly: isConfigurationLocked),
+                icon: const Icon(Icons.settings_outlined),
+              ),
+              const Padding(
                 padding: EdgeInsets.only(right: 8),
                 child: DeveloperSupportButton(),
               ),
@@ -278,15 +375,27 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                         runDurationController: _runDuration,
                         totalDurationController: _totalDuration,
                         intervalCountController: _intervalCount,
+                        walkBpmController: _walkBpm,
+                        runBpmController: _runBpm,
+                        walkMetronomeEnabled: _walkMetronomeEnabled,
+                        runMetronomeEnabled: _runMetronomeEnabled,
                         limitMode: _limitMode,
                         enabled: !isConfigurationLocked,
                         walkError: _walkError,
                         runError: _runError,
                         goalError: _goalError,
+                        walkMetronomeError: _walkMetronomeError,
+                        runMetronomeError: _runMetronomeError,
                         soundEnabled: _timerController.soundEnabled,
                         onChanged: _onConfigurationChanged,
                         onModeChanged: _onModeChanged,
                         onSoundChanged: _timerController.setSoundEnabled,
+                        onWalkMetronomeChanged: (enabled) {
+                          setState(() => _walkMetronomeEnabled = enabled);
+                        },
+                        onRunMetronomeChanged: (enabled) {
+                          setState(() => _runMetronomeEnabled = enabled);
+                        },
                       ),
                     ],
                     const SizedBox(height: 14),

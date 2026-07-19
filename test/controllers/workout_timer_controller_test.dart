@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:run_walk_timer/controllers/workout_timer_controller.dart';
 import 'package:run_walk_timer/models/background_workout_state.dart';
+import 'package:run_walk_timer/models/metronome_config.dart';
+import 'package:run_walk_timer/models/sound_settings.dart';
 import 'package:run_walk_timer/models/workout_plan.dart';
 import 'package:run_walk_timer/services/background_workout_bridge.dart';
 
@@ -20,6 +22,7 @@ void main() {
       controller.start(plan);
       await _flushAsyncWork();
       expect(bridge.startCalls, 1);
+      expect(bridge.lastSoundSettings, const SoundSettings.defaults());
       expect(controller.status, WorkoutStatus.running);
 
       controller.pause();
@@ -106,6 +109,10 @@ void main() {
     expect(state.elapsed, const Duration(seconds: 45));
     expect(state.soundEnabled, isFalse);
     expect(state.notificationsEnabled, isFalse);
+    expect(state.plan.walkMetronome.enabled, isFalse);
+    expect(state.plan.walkMetronome.bpm, MetronomeConfig.defaultWalkBpm);
+    expect(state.plan.runMetronome.enabled, isFalse);
+    expect(state.plan.runMetronome.bpm, MetronomeConfig.defaultRunBpm);
   });
 
   test('native completion becomes terminal without sending an extra stop', () {
@@ -167,13 +174,16 @@ class _FakeBackgroundBridge implements BackgroundWorkoutBridge {
   int stopCalls = 0;
   final List<bool> soundUpdates = [];
   BackgroundWorkoutState? currentState;
+  SoundSettings? lastSoundSettings;
 
   @override
   Future<bool> startSession({
     required WorkoutPlan plan,
     required bool soundEnabled,
+    required SoundSettings soundSettings,
   }) async {
     startCalls += 1;
+    lastSoundSettings = soundSettings;
     return true;
   }
 

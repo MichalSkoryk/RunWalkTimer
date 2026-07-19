@@ -1,3 +1,4 @@
+import 'metronome_config.dart';
 import 'workout_plan.dart';
 
 enum BackgroundWorkoutStatus { idle, running, paused, complete }
@@ -24,17 +25,29 @@ class BackgroundWorkoutState {
       milliseconds: (map['targetMs'] as num?)?.toInt() ?? 0,
     );
     final intervalCount = (map['intervalCount'] as num?)?.toInt() ?? 1;
+    final walkMetronome = MetronomeConfig(
+      enabled: map['walkMetronomeEnabled'] as bool? ?? false,
+      bpm: _validBpm(map['walkBpm'], MetronomeConfig.defaultWalkBpm),
+    );
+    final runMetronome = MetronomeConfig(
+      enabled: map['runMetronomeEnabled'] as bool? ?? false,
+      bpm: _validBpm(map['runBpm'], MetronomeConfig.defaultRunBpm),
+    );
 
     final plan = modeName == WorkoutLimitMode.time.name
         ? WorkoutPlan.timed(
             walkDuration: walkDuration,
             runDuration: runDuration,
             timeLimit: targetDuration,
+            walkMetronome: walkMetronome,
+            runMetronome: runMetronome,
           )
         : WorkoutPlan.intervals(
             walkDuration: walkDuration,
             runDuration: runDuration,
             intervalCount: intervalCount,
+            walkMetronome: walkMetronome,
+            runMetronome: runMetronome,
           );
 
     final statusName = map['status'] as String? ?? 'idle';
@@ -63,4 +76,11 @@ class BackgroundWorkoutState {
   bool get isActive =>
       status == BackgroundWorkoutStatus.running ||
       status == BackgroundWorkoutStatus.paused;
+}
+
+int _validBpm(Object? value, int fallback) {
+  final bpm = (value as num?)?.toInt() ?? fallback;
+  return bpm >= MetronomeConfig.minBpm && bpm <= MetronomeConfig.maxBpm
+      ? bpm
+      : fallback;
 }

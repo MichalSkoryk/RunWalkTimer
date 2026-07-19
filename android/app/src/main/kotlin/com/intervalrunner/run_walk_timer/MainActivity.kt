@@ -32,7 +32,24 @@ class MainActivity : FlutterActivity() {
         deviceChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "playCue" -> {
-                    playCue(call.argument<String>("cue"))
+                    cuePlayer?.playCue(
+                        call.argument<String>("cue"),
+                        call.argument<String>("soundId"),
+                    )
+                    result.success(null)
+                }
+                "getSoundSettings" -> {
+                    result.success(SoundSettingsStore.load(this).toMap())
+                }
+                "setSoundSettings" -> {
+                    val raw = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                    result.success(SoundSettingsStore.save(this, raw).toMap())
+                }
+                "previewSound" -> {
+                    cuePlayer?.preview(
+                        call.argument<String>("category"),
+                        call.argument<String>("soundId"),
+                    )
                     result.success(null)
                 }
                 "setKeepScreenOn" -> {
@@ -69,6 +86,40 @@ class MainActivity : FlutterActivity() {
                             putExtra(
                                 WorkoutTimerService.EXTRA_SOUND,
                                 call.argument<Boolean>("soundEnabled") ?: true,
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_WALK_METRONOME_ENABLED,
+                                call.argument<Boolean>("walkMetronomeEnabled") ?: false,
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_WALK_BPM,
+                                (call.argument<Any?>("walkBpm") as? Number)?.toInt()
+                                    ?: MetronomeTiming.DEFAULT_WALK_BPM,
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_RUN_METRONOME_ENABLED,
+                                call.argument<Boolean>("runMetronomeEnabled") ?: false,
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_RUN_BPM,
+                                (call.argument<Any?>("runBpm") as? Number)?.toInt()
+                                    ?: MetronomeTiming.DEFAULT_RUN_BPM,
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_WALK_CUE_SOUND,
+                                call.argument<String>(SoundSettingsStore.KEY_WALK_CUE),
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_RUN_CUE_SOUND,
+                                call.argument<String>(SoundSettingsStore.KEY_RUN_CUE),
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_COMPLETION_CUE_SOUND,
+                                call.argument<String>(SoundSettingsStore.KEY_COMPLETION_CUE),
+                            )
+                            putExtra(
+                                WorkoutTimerService.EXTRA_METRONOME_SOUND,
+                                call.argument<String>(SoundSettingsStore.KEY_METRONOME),
                             )
                         }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -168,10 +219,6 @@ class MainActivity : FlutterActivity() {
                 NOTIFICATION_PERMISSION_REQUEST,
             )
         }
-    }
-
-    private fun playCue(cue: String?) {
-        cuePlayer?.play(cue)
     }
 
     private fun setKeepScreenOn(enabled: Boolean) {

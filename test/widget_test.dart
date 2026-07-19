@@ -24,6 +24,11 @@ void main() {
     expect(find.byKey(const ValueKey('run-duration')), findsOneWidget);
     expect(find.byKey(const ValueKey('walk-minutes')), findsNothing);
     expect(find.byKey(const ValueKey('walk-seconds')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('walk-metronome-checkbox')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('walk-metronome-bpm')), findsNothing);
     expect(find.byKey(const ValueKey('interval-count-input')), findsOneWidget);
     expect(find.byKey(const ValueKey('total')), findsNothing);
 
@@ -33,6 +38,82 @@ void main() {
     expect(find.byKey(const ValueKey('total')), findsOneWidget);
     expect(find.byKey(const ValueKey('total-duration')), findsOneWidget);
     expect(find.byKey(const ValueKey('interval-count-input')), findsNothing);
+  });
+
+  testWidgets('metronome reveals default BPM and validates 70 to 180', (
+    tester,
+  ) async {
+    _useTallTestWindow(tester);
+    await tester.pumpWidget(const RunWalkTimerApp());
+
+    final checkbox = find.byKey(const ValueKey('walk-metronome-checkbox'));
+    await tester.tap(checkbox);
+    await tester.pumpAndSettle();
+
+    final bpm = find.byKey(const ValueKey('walk-metronome-bpm'));
+    expect(bpm, findsOneWidget);
+    expect(tester.widget<TextField>(bpm).controller?.text, '100');
+
+    await tester.enterText(bpm, '69');
+    await tester.pump();
+    expect(find.text('Enter a BPM from 70 to 180.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('start-button')))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(bpm, '70');
+    await tester.pump();
+    expect(find.text('Enter a BPM from 70 to 180.'), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('start-button')))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.enterText(bpm, '181');
+    await tester.pump();
+    expect(find.text('Enter a BPM from 70 to 180.'), findsOneWidget);
+  });
+
+  testWidgets('sound settings stay accessible but lock during a workout', (
+    tester,
+  ) async {
+    _useTallTestWindow(tester);
+    await tester.pumpWidget(const RunWalkTimerApp());
+
+    await tester.tap(find.byKey(const ValueKey('start-button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('sound-settings-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sound settings'), findsOneWidget);
+    expect(find.text('Sound choices are locked'), findsOneWidget);
+  });
+
+  testWidgets('main setup handles a narrow enlarged-text layout', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MediaQuery(
+        data: MediaQueryData(
+          size: Size(320, 720),
+          textScaler: TextScaler.linear(1.8),
+        ),
+        child: RunWalkTimerApp(),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('sound-settings-button')), findsOneWidget);
   });
 
   testWidgets('normalizes combined duration after editing completes', (

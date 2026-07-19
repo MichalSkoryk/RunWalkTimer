@@ -20,6 +20,7 @@ stop it in either of two ways:
 
 - Single MM:SS inputs for walking and running durations.
 - Single HH:MM:SS input for the total workout time.
+- Optional walking and running metronomes with independent 70–180 BPM values.
 - Cycle-count input validated as an integer of 1 or more.
 - Start, Pause, Resume, Restart, and Stop/reset behavior.
 - Simultaneous current-interval and overall-workout countdowns, with the active
@@ -29,9 +30,11 @@ stop it in either of two ways:
 - An ongoing Android notification with the current Walk/Run phase, interval and
   overall countdowns, and Pause/Resume and Stop actions.
 - A live Sound cues switch that mutes transition and completion tones while
-  leaving vibration feedback enabled.
+  leaving metronomes and vibration feedback enabled.
+- A dedicated Sound settings screen with three persistent, previewable choices
+  for each Walk, Run, completion, and shared metronome sound.
 - Clear normalized audio and vibration patterns for Walk, Run, and completion;
-  competing media briefly ducks so cues remain audible.
+  competing media briefly ducks for cues while metronome ticks mix over it.
 - Drift-resistant timing based on active elapsed time, rather than subtracting
   one second per callback.
 - Screen-awake behavior while a workout is running.
@@ -55,6 +58,8 @@ lib/
 test/
   core/              Timeline and formatting unit tests
   widget_test.dart   Conditional UI, validation, and start-state tests
+tool/
+  generate_audio_assets.dart  Reproducible bundled cue and metronome WAVs
 scripts/
   run_on_phone.ps1   Checks the project and launches it on an Android device
 ```
@@ -153,10 +158,11 @@ Use all three layers:
 3. Use a real phone for sound volume, vibration, pause/resume, phone-call
    interruptions, screen rotation, and a full-length outdoor session.
 
-For quick manual cue testing, temporarily use 5-second Walk and Run durations
-and 2 cycles. Verify that the initial Walk starts silently, entering Run plays
-the high double cue, entering the next Walk plays the lower cue, and completion
-uses the three-part cue.
+For quick manual audio testing, temporarily use 5-second Walk and Run durations
+and 2 cycles. Enable both metronomes, verify the initial Walk beat starts
+immediately, transition cues act as phase downbeats, pause silences beats, and
+completion stops the metronome before playing its selected cue. Also confirm
+that changing each sound in Sound settings persists after restarting the app.
 
 ## Build a signed release APK
 

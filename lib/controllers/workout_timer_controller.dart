@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/workout_timeline.dart';
 import '../models/background_workout_state.dart';
+import '../models/sound_settings.dart';
 import '../models/workout_plan.dart';
 import '../models/workout_snapshot.dart';
 import '../services/background_workout_bridge.dart';
@@ -27,6 +28,7 @@ class WorkoutTimerController extends ChangeNotifier {
   WorkoutSnapshot? _snapshot;
   Duration _bankedElapsed = Duration.zero;
   bool _soundEnabled = true;
+  SoundSettings _soundSettings = const SoundSettings.defaults();
   bool _notificationsEnabled = true;
   bool _backgroundServiceActive = false;
   int _backgroundSessionId = 0;
@@ -52,7 +54,10 @@ class WorkoutTimerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void start(WorkoutPlan plan) {
+  void start(
+    WorkoutPlan plan, {
+    SoundSettings soundSettings = const SoundSettings.defaults(),
+  }) {
     if (status == WorkoutStatus.paused) {
       resume();
       return;
@@ -63,6 +68,7 @@ class WorkoutTimerController extends ChangeNotifier {
 
     _ticker?.cancel();
     _plan = plan;
+    _soundSettings = soundSettings;
     _bankedElapsed = Duration.zero;
     _activeLeg
       ..stop()
@@ -177,13 +183,20 @@ class WorkoutTimerController extends ChangeNotifier {
       unawaited(_feedbackService.setKeepScreenOn(false));
       if (!_backgroundServiceActive) {
         unawaited(
-          _feedbackService.playCompletionCue(soundEnabled: _soundEnabled),
+          _feedbackService.playCompletionCue(
+            soundEnabled: _soundEnabled,
+            soundSettings: _soundSettings,
+          ),
         );
       }
     } else if (next.segmentOrdinal != previous.segmentOrdinal &&
         !_backgroundServiceActive) {
       unawaited(
-        _feedbackService.playPhaseCue(next.phase, soundEnabled: _soundEnabled),
+        _feedbackService.playPhaseCue(
+          next.phase,
+          soundEnabled: _soundEnabled,
+          soundSettings: _soundSettings,
+        ),
       );
     }
 
@@ -208,6 +221,7 @@ class WorkoutTimerController extends ChangeNotifier {
     final started = await _backgroundBridge.startSession(
       plan: plan,
       soundEnabled: _soundEnabled,
+      soundSettings: _soundSettings,
     );
     if (!started) {
       _backgroundServiceActive = false;

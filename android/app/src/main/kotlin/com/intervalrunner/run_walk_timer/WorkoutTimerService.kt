@@ -28,6 +28,7 @@ import kotlin.math.min
 
 class WorkoutTimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private val metronomeHandler = Handler(Looper.getMainLooper())
     private lateinit var notificationManager: NotificationManager
     private lateinit var cuePlayer: WorkoutCuePlayer
     private var wakeLock: PowerManager.WakeLock? = null
@@ -39,6 +40,14 @@ class WorkoutTimerService : Service() {
     private var limitMode = LIMIT_INTERVALS
     private var intervalCount = 1
     private var soundEnabled = true
+    private var walkMetronomeEnabled = false
+    private var walkBpm = MetronomeTiming.DEFAULT_WALK_BPM
+    private var runMetronomeEnabled = false
+    private var runBpm = MetronomeTiming.DEFAULT_RUN_BPM
+    private var walkCueSound = SoundSettingsStore.DEFAULT_WALK_CUE
+    private var runCueSound = SoundSettingsStore.DEFAULT_RUN_CUE
+    private var completionCueSound = SoundSettingsStore.DEFAULT_COMPLETION_CUE
+    private var metronomeSound = SoundSettingsStore.DEFAULT_METRONOME
     private var accumulatedMs = 0L
     private var runningAnchorMs = 0L
     private var runningAnchorWallMs = 0L
@@ -48,6 +57,10 @@ class WorkoutTimerService : Service() {
     private var bootCount = -1
     private var lastRenderedSecond = -1L
     private var lastRenderedOrdinal = -1L
+    private var metronomeAnchorRealtimeMs = 0L
+    private var metronomeBeatIndex = 0L
+    private var metronomeSegmentOrdinal = -1L
+    private var metronomeBpm = 0
 
     private val tick = object : Runnable {
         override fun run() {
@@ -58,6 +71,46 @@ class WorkoutTimerService : Service() {
             if (status == STATUS_RUNNING) {
                 handler.postDelayed(this, TICK_MS)
             }
+        }
+    }
+
+    private val metronomeTick = object : Runnable {
+        override fun run() {
+            if (status != STATUS_RUNNING || metronomeSegmentOrdinal < 0L) {
+                return
+            }
+
+            val elapsed = currentElapsed()
+            if (elapsed >= targetMs) {
+                cancelMetronome()
+                return
+            }
+            val derived = derive(elapsed)
+            val enabled = if (derived.isWalking) {
+                walkMetronomeEnabled
+            } else {
+                runMetronomeEnabled
+            }
+            val bpm = if (derived.isWalking) walkBpm else runBpm
+            if (!enabled ||
+                derived.segmentOrdinal != metronomeSegmentOrdinal ||
+                bpm != metronomeBpm
+            ) {
+                cancelMetronome()
+                return
+            }
+
+            cuePlayer.playMetronome(metronomeSound)
+            metronomeBeatIndex += 1L
+            val now = SystemClock.elapsedRealtime()
+            var target = metronomeAnchorRealtimeMs +
+                MetronomeTiming.beatOffsetMs(metronomeBeatIndex, metronomeBpm)
+            while (target <= now) {
+                metronomeBeatIndex += 1L
+                target = metronomeAnchorRealtimeMs +
+                    MetronomeTiming.beatOffsetMs(metronomeBeatIndex, metronomeBpm)
+            }
+            metronomeHandler.postDelayed(this, max(0L, target - now))
         }
     }
 
@@ -116,6 +169,34 @@ class WorkoutTimerService : Service() {
         limitMode = intent.getStringExtra(EXTRA_LIMIT_MODE) ?: LIMIT_INTERVALS
         intervalCount = max(1, intent.getIntExtra(EXTRA_INTERVAL_COUNT, 1))
         soundEnabled = intent.getBooleanExtra(EXTRA_SOUND, true)
+        walkMetronomeEnabled = intent.getBooleanExtra(
+            EXTRA_WALK_METRONOME_ENABLED,
+            false,
+        )
+        walkBpm = MetronomeTiming.sanitizeBpm(
+            intent.getIntExtra(EXTRA_WALK_BPM, MetronomeTiming.DEFAULT_WALK_BPM),
+            MetronomeTiming.DEFAULT_WALK_BPM,
+        )
+        runMetronomeEnabled = intent.getBooleanExtra(
+            EXTRA_RUN_METRONOME_ENABLED,
+            false,
+        )
+        runBpm = MetronomeTiming.sanitizeBpm(
+            intent.getIntExtra(EXTRA_RUN_BPM, MetronomeTiming.DEFAULT_RUN_BPM),
+            MetronomeTiming.DEFAULT_RUN_BPM,
+        )
+        walkCueSound = SoundSettingsStore.sanitizeWalk(
+            intent.getStringExtra(EXTRA_WALK_CUE_SOUND),
+        )
+        runCueSound = SoundSettingsStore.sanitizeRun(
+            intent.getStringExtra(EXTRA_RUN_CUE_SOUND),
+        )
+        completionCueSound = SoundSettingsStore.sanitizeCompletion(
+            intent.getStringExtra(EXTRA_COMPLETION_CUE_SOUND),
+        )
+        metronomeSound = SoundSettingsStore.sanitizeMetronome(
+            intent.getStringExtra(EXTRA_METRONOME_SOUND),
+        )
         accumulatedMs = 0L
         runningAnchorMs = SystemClock.elapsedRealtime()
         runningAnchorWallMs = System.currentTimeMillis()
@@ -132,6 +213,7 @@ class WorkoutTimerService : Service() {
         ensureForeground(buildNotification(derive(0L)))
         emitState(0L)
         scheduleTick()
+        scheduleMetronome(derive(0L), immediate = true)
     }
 
     private fun restoreSession() {
@@ -157,6 +239,7 @@ class WorkoutTimerService : Service() {
             if (status == STATUS_RUNNING) {
                 acquireWakeLock()
                 scheduleTick()
+                scheduleMetronome(derived, immediate = true)
             }
             emitState(elapsed)
         } else {
@@ -182,6 +265,7 @@ class WorkoutTimerService : Service() {
         checkpointElapsedMs = accumulatedMs
         status = STATUS_PAUSED
         handler.removeCallbacks(tick)
+        cancelMetronome()
         releaseWakeLock()
         persistState()
 
@@ -207,6 +291,7 @@ class WorkoutTimerService : Service() {
         ensureForeground(buildNotification(derived))
         emitState(accumulatedMs)
         scheduleTick()
+        scheduleMetronome(derived, immediate = true)
     }
 
     private fun stopSession() {
@@ -223,6 +308,7 @@ class WorkoutTimerService : Service() {
         runningAnchorWallMs = 0L
         checkpointElapsedMs = 0L
         handler.removeCallbacksAndMessages(null)
+        cancelMetronome()
         cuePlayer.stop()
         releaseWakeLock()
         persistState()
@@ -235,7 +321,7 @@ class WorkoutTimerService : Service() {
     private fun setSound(enabled: Boolean) {
         soundEnabled = enabled
         if (!enabled) {
-            cuePlayer.stop()
+            cuePlayer.stopCue()
         }
         persistState()
         if (status == STATUS_RUNNING || status == STATUS_PAUSED) {
@@ -258,6 +344,7 @@ class WorkoutTimerService : Service() {
             checkpointElapsedMs = elapsed
             persistState()
             playPhaseCue(derived.isWalking)
+            scheduleMetronome(derived, immediate = !soundEnabled)
         } else if (elapsed - checkpointElapsedMs >= CHECKPOINT_INTERVAL_MS) {
             checkpointElapsedMs = elapsed
             persistCheckpoint()
@@ -285,6 +372,7 @@ class WorkoutTimerService : Service() {
         runningAnchorWallMs = 0L
         checkpointElapsedMs = targetMs
         handler.removeCallbacksAndMessages(null)
+        cancelMetronome()
         releaseWakeLock()
         persistState()
         playCompletionCue()
@@ -484,6 +572,33 @@ class WorkoutTimerService : Service() {
         handler.postDelayed(tick, TICK_MS)
     }
 
+    private fun scheduleMetronome(state: DerivedState, immediate: Boolean) {
+        cancelMetronome()
+        val enabled = if (state.isWalking) {
+            walkMetronomeEnabled
+        } else {
+            runMetronomeEnabled
+        }
+        if (!enabled || status != STATUS_RUNNING) {
+            return
+        }
+
+        metronomeBpm = if (state.isWalking) walkBpm else runBpm
+        metronomeSegmentOrdinal = state.segmentOrdinal
+        metronomeAnchorRealtimeMs = SystemClock.elapsedRealtime()
+        metronomeBeatIndex = MetronomeTiming.initialBeatIndex(immediate)
+        val delay = MetronomeTiming.beatOffsetMs(metronomeBeatIndex, metronomeBpm)
+        metronomeHandler.postDelayed(metronomeTick, delay)
+    }
+
+    private fun cancelMetronome() {
+        metronomeHandler.removeCallbacksAndMessages(null)
+        metronomeSegmentOrdinal = -1L
+        metronomeBeatIndex = 0L
+        metronomeBpm = 0
+        cuePlayer.stopMetronome()
+    }
+
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) {
             return
@@ -507,8 +622,9 @@ class WorkoutTimerService : Service() {
 
     private fun playPhaseCue(isWalking: Boolean) {
         if (soundEnabled) {
-            cuePlayer.play(
+            cuePlayer.playCue(
                 if (isWalking) WorkoutCuePlayer.CUE_WALK else WorkoutCuePlayer.CUE_RUN,
+                if (isWalking) walkCueSound else runCueSound,
             )
         }
         vibrate(if (isWalking) longArrayOf(0L, 100L) else longArrayOf(0L, 80L, 80L, 80L))
@@ -516,7 +632,7 @@ class WorkoutTimerService : Service() {
 
     private fun playCompletionCue() {
         if (soundEnabled) {
-            cuePlayer.play(WorkoutCuePlayer.CUE_COMPLETE)
+            cuePlayer.playCue(WorkoutCuePlayer.CUE_COMPLETE, completionCueSound)
         }
         vibrate(longArrayOf(0L, 350L))
     }
@@ -545,6 +661,10 @@ class WorkoutTimerService : Service() {
             "intervalCount" to intervalCount,
             "elapsedMs" to elapsed,
             "soundEnabled" to soundEnabled,
+            "walkMetronomeEnabled" to walkMetronomeEnabled,
+            "walkBpm" to walkBpm,
+            "runMetronomeEnabled" to runMetronomeEnabled,
+            "runBpm" to runBpm,
             "sessionId" to sessionId,
             "notificationsEnabled" to notificationsEnabled(this),
         )
@@ -560,6 +680,14 @@ class WorkoutTimerService : Service() {
             .putString(KEY_LIMIT_MODE, limitMode)
             .putInt(KEY_INTERVAL_COUNT, intervalCount)
             .putBoolean(KEY_SOUND, soundEnabled)
+            .putBoolean(KEY_WALK_METRONOME_ENABLED, walkMetronomeEnabled)
+            .putInt(KEY_WALK_BPM, walkBpm)
+            .putBoolean(KEY_RUN_METRONOME_ENABLED, runMetronomeEnabled)
+            .putInt(KEY_RUN_BPM, runBpm)
+            .putString(KEY_WALK_CUE_SOUND, walkCueSound)
+            .putString(KEY_RUN_CUE_SOUND, runCueSound)
+            .putString(KEY_COMPLETION_CUE_SOUND, completionCueSound)
+            .putString(KEY_METRONOME_SOUND, metronomeSound)
             .putLong(KEY_ACCUMULATED_MS, accumulatedMs)
             .putLong(KEY_RUNNING_ANCHOR_MS, runningAnchorMs)
             .putLong(KEY_RUNNING_ANCHOR_WALL_MS, runningAnchorWallMs)
@@ -587,6 +715,34 @@ class WorkoutTimerService : Service() {
             ?: LIMIT_INTERVALS
         intervalCount = preferences.getInt(KEY_INTERVAL_COUNT, 1)
         soundEnabled = preferences.getBoolean(KEY_SOUND, true)
+        walkMetronomeEnabled = preferences.getBoolean(
+            KEY_WALK_METRONOME_ENABLED,
+            false,
+        )
+        walkBpm = MetronomeTiming.sanitizeBpm(
+            preferences.getInt(KEY_WALK_BPM, MetronomeTiming.DEFAULT_WALK_BPM),
+            MetronomeTiming.DEFAULT_WALK_BPM,
+        )
+        runMetronomeEnabled = preferences.getBoolean(
+            KEY_RUN_METRONOME_ENABLED,
+            false,
+        )
+        runBpm = MetronomeTiming.sanitizeBpm(
+            preferences.getInt(KEY_RUN_BPM, MetronomeTiming.DEFAULT_RUN_BPM),
+            MetronomeTiming.DEFAULT_RUN_BPM,
+        )
+        walkCueSound = SoundSettingsStore.sanitizeWalk(
+            preferences.getString(KEY_WALK_CUE_SOUND, null),
+        )
+        runCueSound = SoundSettingsStore.sanitizeRun(
+            preferences.getString(KEY_RUN_CUE_SOUND, null),
+        )
+        completionCueSound = SoundSettingsStore.sanitizeCompletion(
+            preferences.getString(KEY_COMPLETION_CUE_SOUND, null),
+        )
+        metronomeSound = SoundSettingsStore.sanitizeMetronome(
+            preferences.getString(KEY_METRONOME_SOUND, null),
+        )
         accumulatedMs = preferences.getLong(KEY_ACCUMULATED_MS, 0L)
         runningAnchorMs = preferences.getLong(KEY_RUNNING_ANCHOR_MS, 0L)
         runningAnchorWallMs = preferences.getLong(KEY_RUNNING_ANCHOR_WALL_MS, 0L)
@@ -602,6 +758,7 @@ class WorkoutTimerService : Service() {
     override fun onDestroy() {
         serviceAlive = false
         handler.removeCallbacksAndMessages(null)
+        metronomeHandler.removeCallbacksAndMessages(null)
         releaseWakeLock()
         cuePlayer.release()
         super.onDestroy()
@@ -628,6 +785,14 @@ class WorkoutTimerService : Service() {
         const val EXTRA_LIMIT_MODE = "limitMode"
         const val EXTRA_INTERVAL_COUNT = "intervalCount"
         const val EXTRA_SOUND = "soundEnabled"
+        const val EXTRA_WALK_METRONOME_ENABLED = "walkMetronomeEnabled"
+        const val EXTRA_WALK_BPM = "walkBpm"
+        const val EXTRA_RUN_METRONOME_ENABLED = "runMetronomeEnabled"
+        const val EXTRA_RUN_BPM = "runBpm"
+        const val EXTRA_WALK_CUE_SOUND = "walkCueSound"
+        const val EXTRA_RUN_CUE_SOUND = "runCueSound"
+        const val EXTRA_COMPLETION_CUE_SOUND = "completionCueSound"
+        const val EXTRA_METRONOME_SOUND = "metronomeSound"
         const val EXTRA_SESSION_ID = "sessionId"
 
         private const val STATUS_IDLE = "idle"
@@ -643,6 +808,14 @@ class WorkoutTimerService : Service() {
         private const val KEY_LIMIT_MODE = "limit_mode"
         private const val KEY_INTERVAL_COUNT = "interval_count"
         private const val KEY_SOUND = "sound"
+        private const val KEY_WALK_METRONOME_ENABLED = "walk_metronome_enabled"
+        private const val KEY_WALK_BPM = "walk_bpm"
+        private const val KEY_RUN_METRONOME_ENABLED = "run_metronome_enabled"
+        private const val KEY_RUN_BPM = "run_bpm"
+        private const val KEY_WALK_CUE_SOUND = "walk_cue_sound"
+        private const val KEY_RUN_CUE_SOUND = "run_cue_sound"
+        private const val KEY_COMPLETION_CUE_SOUND = "completion_cue_sound"
+        private const val KEY_METRONOME_SOUND = "metronome_sound"
         private const val KEY_ACCUMULATED_MS = "accumulated_ms"
         private const val KEY_RUNNING_ANCHOR_MS = "running_anchor_ms"
         private const val KEY_RUNNING_ANCHOR_WALL_MS = "running_anchor_wall_ms"
@@ -752,6 +925,28 @@ class WorkoutTimerService : Service() {
                 "intervalCount" to preferences.getInt(KEY_INTERVAL_COUNT, 1),
                 "elapsedMs" to elapsed,
                 "soundEnabled" to preferences.getBoolean(KEY_SOUND, true),
+                "walkMetronomeEnabled" to preferences.getBoolean(
+                    KEY_WALK_METRONOME_ENABLED,
+                    false,
+                ),
+                "walkBpm" to MetronomeTiming.sanitizeBpm(
+                    preferences.getInt(
+                        KEY_WALK_BPM,
+                        MetronomeTiming.DEFAULT_WALK_BPM,
+                    ),
+                    MetronomeTiming.DEFAULT_WALK_BPM,
+                ),
+                "runMetronomeEnabled" to preferences.getBoolean(
+                    KEY_RUN_METRONOME_ENABLED,
+                    false,
+                ),
+                "runBpm" to MetronomeTiming.sanitizeBpm(
+                    preferences.getInt(
+                        KEY_RUN_BPM,
+                        MetronomeTiming.DEFAULT_RUN_BPM,
+                    ),
+                    MetronomeTiming.DEFAULT_RUN_BPM,
+                ),
                 "sessionId" to preferences.getLong(KEY_SESSION_ID, 0L),
                 "notificationsEnabled" to notificationsEnabled(context),
             )
