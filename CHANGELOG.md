@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 - Unreleased
 
 - Combined each duration into one formatted MM:SS or HH:MM:SS input.
+- Added independent 70–180 BPM metronomes for walking and running.
+- Added persistent Sound settings with selectable and previewable Walk, Run,
+  completion, and metronome sounds.
+- Added background-safe, drift-resistant metronome scheduling on Android.
 
 ## 1.0.3 - 2026-07-18
 

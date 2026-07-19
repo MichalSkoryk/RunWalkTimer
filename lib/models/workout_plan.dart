@@ -1,3 +1,5 @@
+import 'metronome_config.dart';
+
 enum WorkoutLimitMode { time, intervals }
 
 enum WorkoutPhase { walk, run }
@@ -17,14 +19,19 @@ class WorkoutPlan {
     required this.limitMode,
     required this.timeLimit,
     required this.intervalCount,
+    required this.walkMetronome,
+    required this.runMetronome,
   });
 
   factory WorkoutPlan.timed({
     required Duration walkDuration,
     required Duration runDuration,
     required Duration timeLimit,
+    MetronomeConfig walkMetronome = MetronomeConfig.walkDefault,
+    MetronomeConfig runMetronome = MetronomeConfig.runDefault,
   }) {
     _validatePhaseDurations(walkDuration, runDuration);
+    _validateMetronomes(walkMetronome, runMetronome);
     if (timeLimit <= Duration.zero) {
       throw ArgumentError.value(
         timeLimit,
@@ -39,6 +46,8 @@ class WorkoutPlan {
       limitMode: WorkoutLimitMode.time,
       timeLimit: timeLimit,
       intervalCount: null,
+      walkMetronome: walkMetronome,
+      runMetronome: runMetronome,
     );
   }
 
@@ -46,8 +55,11 @@ class WorkoutPlan {
     required Duration walkDuration,
     required Duration runDuration,
     required int intervalCount,
+    MetronomeConfig walkMetronome = MetronomeConfig.walkDefault,
+    MetronomeConfig runMetronome = MetronomeConfig.runDefault,
   }) {
     _validatePhaseDurations(walkDuration, runDuration);
+    _validateMetronomes(walkMetronome, runMetronome);
     if (intervalCount < 1) {
       throw ArgumentError.value(
         intervalCount,
@@ -62,6 +74,8 @@ class WorkoutPlan {
       limitMode: WorkoutLimitMode.intervals,
       timeLimit: null,
       intervalCount: intervalCount,
+      walkMetronome: walkMetronome,
+      runMetronome: runMetronome,
     );
   }
 
@@ -70,6 +84,8 @@ class WorkoutPlan {
   final WorkoutLimitMode limitMode;
   final Duration? timeLimit;
   final int? intervalCount;
+  final MetronomeConfig walkMetronome;
+  final MetronomeConfig runMetronome;
 
   Duration get cycleDuration => walkDuration + runDuration;
 
@@ -100,6 +116,25 @@ class WorkoutPlan {
         'runDuration',
         'must be greater than zero',
       );
+    }
+  }
+
+  static void _validateMetronomes(
+    MetronomeConfig walkMetronome,
+    MetronomeConfig runMetronome,
+  ) {
+    for (final entry in <String, MetronomeConfig>{
+      'walkMetronome': walkMetronome,
+      'runMetronome': runMetronome,
+    }.entries) {
+      if (!entry.value.hasValidBpm) {
+        throw ArgumentError.value(
+          entry.value.bpm,
+          entry.key,
+          'BPM must be between ${MetronomeConfig.minBpm} and '
+          '${MetronomeConfig.maxBpm}',
+        );
+      }
     }
   }
 }

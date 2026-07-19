@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../models/workout_plan.dart';
+import '../models/sound_settings.dart';
 
 class DeviceFeedbackService {
   static const _channel = MethodChannel('run_walk_timer/device');
@@ -8,9 +9,15 @@ class DeviceFeedbackService {
   Future<void> playPhaseCue(
     WorkoutPhase phase, {
     required bool soundEnabled,
+    required SoundSettings soundSettings,
   }) async {
     if (soundEnabled) {
-      await _playNativeCue(phase.name);
+      await _playNativeCue(
+        phase.name,
+        phase == WorkoutPhase.walk
+            ? soundSettings.walkCue.id
+            : soundSettings.runCue.id,
+      );
     }
 
     try {
@@ -26,9 +33,12 @@ class DeviceFeedbackService {
     }
   }
 
-  Future<void> playCompletionCue({required bool soundEnabled}) async {
+  Future<void> playCompletionCue({
+    required bool soundEnabled,
+    required SoundSettings soundSettings,
+  }) async {
     if (soundEnabled) {
-      await _playNativeCue('complete');
+      await _playNativeCue('complete', soundSettings.completionCue.id);
     }
     try {
       await HapticFeedback.heavyImpact();
@@ -47,10 +57,11 @@ class DeviceFeedbackService {
     }
   }
 
-  Future<void> _playNativeCue(String cue) async {
+  Future<void> _playNativeCue(String cue, String soundId) async {
     try {
       await _channel.invokeMethod<void>('playCue', <String, Object>{
         'cue': cue,
+        'soundId': soundId,
       });
     } catch (_) {
       try {

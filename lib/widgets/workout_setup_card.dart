@@ -5,6 +5,7 @@ import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
 import 'duration_input.dart';
 import 'goal_mode_selector.dart';
+import 'metronome_config_input.dart';
 import 'numeric_field.dart';
 
 class WorkoutSetupCard extends StatelessWidget {
@@ -13,15 +14,23 @@ class WorkoutSetupCard extends StatelessWidget {
     required this.runDurationController,
     required this.totalDurationController,
     required this.intervalCountController,
+    required this.walkBpmController,
+    required this.runBpmController,
+    required this.walkMetronomeEnabled,
+    required this.runMetronomeEnabled,
     required this.limitMode,
     required this.enabled,
     required this.walkError,
     required this.runError,
     required this.goalError,
+    required this.walkMetronomeError,
+    required this.runMetronomeError,
     required this.soundEnabled,
     required this.onChanged,
     required this.onModeChanged,
     required this.onSoundChanged,
+    required this.onWalkMetronomeChanged,
+    required this.onRunMetronomeChanged,
     super.key,
   });
 
@@ -29,15 +38,23 @@ class WorkoutSetupCard extends StatelessWidget {
   final TextEditingController runDurationController;
   final TextEditingController totalDurationController;
   final TextEditingController intervalCountController;
+  final TextEditingController walkBpmController;
+  final TextEditingController runBpmController;
+  final bool walkMetronomeEnabled;
+  final bool runMetronomeEnabled;
   final WorkoutLimitMode limitMode;
   final bool enabled;
   final String? walkError;
   final String? runError;
   final String? goalError;
+  final String? walkMetronomeError;
+  final String? runMetronomeError;
   final bool soundEnabled;
   final VoidCallback onChanged;
   final ValueChanged<WorkoutLimitMode> onModeChanged;
   final ValueChanged<bool> onSoundChanged;
+  final ValueChanged<bool> onWalkMetronomeChanged;
+  final ValueChanged<bool> onRunMetronomeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +89,16 @@ class WorkoutSetupCard extends StatelessWidget {
               errorText: walkError,
               onChanged: onChanged,
             ),
+            const SizedBox(height: 10),
+            MetronomeConfigInput(
+              phaseKey: 'walk',
+              enabled: enabled,
+              checked: walkMetronomeEnabled,
+              bpmController: walkBpmController,
+              errorText: walkMetronomeError,
+              onCheckedChanged: onWalkMetronomeChanged,
+              onChanged: onChanged,
+            ),
             const SizedBox(height: 14),
             DurationInput(
               inputKey: const ValueKey('run'),
@@ -82,6 +109,16 @@ class WorkoutSetupCard extends StatelessWidget {
               format: DurationInputFormat.minutesSeconds,
               enabled: enabled,
               errorText: runError,
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 10),
+            MetronomeConfigInput(
+              phaseKey: 'run',
+              enabled: enabled,
+              checked: runMetronomeEnabled,
+              bpmController: runBpmController,
+              errorText: runMetronomeError,
+              onCheckedChanged: onRunMetronomeChanged,
               onChanged: onChanged,
             ),
             const SizedBox(height: 22),
@@ -151,7 +188,7 @@ class _SoundCueSwitch extends StatelessWidget {
         ),
         subtitle: const Text(
           'Play tones for Walk, Run, and completion. '
-          'Vibration remains active.',
+          'Metronomes and vibration remain active.',
         ),
       ),
     );
