@@ -1,4 +1,4 @@
-# Run/Walk Timer download site
+# Base Pacer download site
 
 This is a zero-build static site. It checks GitHub Releases in the visitor's
 browser and links the download button to the newest uploaded, non-debug APK.
@@ -22,7 +22,7 @@ version.
 
 1. Create a normal, non-draft GitHub Release, for example tag `v1.0.0`.
 2. Attach a properly release-signed APK.
-3. Prefer the stable filename `run-walk-timer.apk`.
+3. Prefer the stable filename `base-pacer.apk`.
 
 The page also recognizes `app-release.apk` and
 `app-arm64-v8a-release.apk`. It refuses assets containing `debug` unless
@@ -50,3 +50,7 @@ also be started manually from the repository's **Actions** tab.
 No GitHub token belongs in this site. Public releases can be read through the
 unauthenticated GitHub API. The UI includes safe fallbacks for a missing
 repository/release, a release without an APK, API rate limits, and offline use.
+
+The public app privacy policy is `privacy.html`. Keep its effective date and
+data-practice details in sync with every release that changes permissions,
+storage, analytics, accounts, or external services.
