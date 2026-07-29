@@ -1,0 +1,1 @@
+Welcome to Base Pacer. Create walk/run intervals, follow optional per-phase metronomes, adjust BPM during a workout, and control an active timer from its Android notification.

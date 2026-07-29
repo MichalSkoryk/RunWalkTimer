@@ -243,6 +243,19 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
     setState(() => _limitMode = value);
   }
 
+  void _updateCurrentBpm(int bpm) {
+    final phase = _timerController.snapshot?.phase;
+    if (phase == null) {
+      return;
+    }
+    if (phase == WorkoutPhase.walk) {
+      _walkBpm.text = '$bpm';
+    } else {
+      _runBpm.text = '$bpm';
+    }
+    _timerController.updateCurrentPhaseBpm(bpm);
+  }
+
   void _start() {
     if (_timerController.status == WorkoutStatus.paused) {
       _timerController.resume();
@@ -315,7 +328,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
         return Scaffold(
           appBar: AppBar(
             title: const Text(
-              'Run/Walk Timer',
+              'Base Pacer',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w800),
@@ -344,7 +357,16 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
-                    CurrentPhaseCard(snapshot: _timerController.snapshot),
+                    CurrentPhaseCard(
+                      snapshot: _timerController.snapshot,
+                      plan: _timerController.plan,
+                      onSkipPhase: _timerController.isInProgress
+                          ? _timerController.skipPhase
+                          : null,
+                      onBpmChanged: _timerController.isInProgress
+                          ? _updateCurrentBpm
+                          : null,
+                    ),
                     if (status == WorkoutStatus.running ||
                         status == WorkoutStatus.paused) ...[
                       const SizedBox(height: 14),
@@ -418,7 +440,7 @@ class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
                             _timerController.notificationsEnabled
                                 ? 'You can leave the app during a workout. The '
                                       'ongoing notification shows both timers '
-                                      'and Pause, Resume, and Stop controls.'
+                                      'and Pause, Resume, Skip, and Stop controls.'
                                 : 'The timer can continue in the background, '
                                       'but notification controls stay hidden '
                                       'until notifications are enabled.',

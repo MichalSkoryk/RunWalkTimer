@@ -1,13 +1,22 @@
 # Changelog
 
-## 1.2.0 - Unreleased
+## 1.3.0 - Unreleased
+
+- Renamed the app to Base Pacer: Run/Walk Timer.
+- Added in-app and notification controls to skip the remaining current phase.
+- Added live 70–180 BPM controls for the active metronome phase.
+- Live BPM changes persist per phase and take effect cleanly on the next beat.
+- Changed the Android application ID to `com.skoryk.basepacer` for the first
+  Google Play release.
+- Added a public privacy policy and an in-app link that opens it in the browser.
+- Added Play Store listing copy, graphics, screenshots, and foreground-service
+  declaration guidance.
+
+## 1.2.0 - 2026-07-19
 
 - Reworked Workout setup into compact phase and goal rows to reduce scrolling.
 - Reworked Sound settings into compact selectors with inline preview actions.
 - Kept Support immediately left of Settings and Settings at the far right.
-
-## 1.1.0 - Unreleased
-
 - Combined each duration into one formatted MM:SS or HH:MM:SS input.
 - Added independent 70–180 BPM metronomes for walking and running.
 - Added persistent Sound settings with selectable and previewable Walk, Run,

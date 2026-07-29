@@ -8,7 +8,7 @@ the Tabler `run` icon:
 https://github.com/tabler/tabler-icons/blob/main/icons/outline/run.svg
 
 The original geometry is retained; its color, scale, background, and output
-format were adapted for Run/Walk Timer.
+format were adapted for Base Pacer.
 
 MIT License
 

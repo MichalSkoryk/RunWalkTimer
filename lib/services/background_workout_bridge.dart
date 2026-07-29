@@ -47,6 +47,15 @@ class BackgroundWorkoutBridge {
 
   Future<void> stopSession() => _sendCommand('stopWorkoutService');
 
+  Future<void> skipPhase() => _sendCommand('skipWorkoutPhase');
+
+  Future<void> updateMetronomeBpm(WorkoutPhase phase, int bpm) {
+    return _sendCommand('setWorkoutServiceMetronomeBpm', <String, Object>{
+      'phase': phase.name,
+      'bpm': bpm,
+    });
+  }
+
   Future<void> updateSound(bool enabled) {
     return _sendCommand('setWorkoutServiceSound', <String, Object>{
       'enabled': enabled,

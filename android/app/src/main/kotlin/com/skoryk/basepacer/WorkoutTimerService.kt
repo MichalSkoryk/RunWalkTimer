@@ -1,4 +1,4 @@
-package com.intervalrunner.run_walk_timer
+package com.skoryk.basepacer
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -143,6 +143,15 @@ class WorkoutTimerService : Service() {
                     stopSession()
                 }
             }
+            ACTION_SKIP_PHASE -> {
+                if (matchesSession(intent)) {
+                    skipPhase()
+                }
+            }
+            ACTION_SET_METRONOME_BPM -> setMetronomeBpm(
+                intent.getStringExtra(EXTRA_PHASE),
+                intent.getIntExtra(EXTRA_BPM, 0),
+            )
             ACTION_SET_SOUND -> setSound(intent.getBooleanExtra(EXTRA_SOUND, true))
             else -> restoreSession()
         }
@@ -330,6 +339,67 @@ class WorkoutTimerService : Service() {
         }
     }
 
+    private fun skipPhase() {
+        if (status != STATUS_RUNNING && status != STATUS_PAUSED) {
+            return
+        }
+
+        val elapsed = currentElapsed()
+        if (elapsed >= targetMs) {
+            completeSession()
+            return
+        }
+        val derived = derive(elapsed)
+        cancelMetronome()
+        accumulatedMs = LiveWorkoutTiming.elapsedAfterSkip(
+            elapsedMs = elapsed,
+            phaseRemainingMs = derived.displayRemainingMs,
+            targetMs = targetMs,
+        )
+        checkpointElapsedMs = accumulatedMs
+        if (status == STATUS_RUNNING) {
+            runningAnchorMs = SystemClock.elapsedRealtime()
+            runningAnchorWallMs = System.currentTimeMillis()
+        } else {
+            runningAnchorMs = 0L
+            runningAnchorWallMs = 0L
+        }
+        lastRenderedSecond = -1L
+        lastRenderedOrdinal = -1L
+        reconcileAndRender()
+    }
+
+    private fun setMetronomeBpm(phase: String?, bpm: Int) {
+        if (bpm !in MetronomeTiming.MIN_BPM..MetronomeTiming.MAX_BPM) {
+            return
+        }
+        when (phase) {
+            PHASE_WALK -> walkBpm = bpm
+            PHASE_RUN -> runBpm = bpm
+            else -> return
+        }
+        persistState()
+
+        if (status != STATUS_RUNNING && status != STATUS_PAUSED) {
+            return
+        }
+        val elapsed = currentElapsed()
+        val derived = derive(elapsed)
+        val changedCurrentPhase =
+            (phase == PHASE_WALK && derived.isWalking) ||
+                (phase == PHASE_RUN && !derived.isWalking)
+        val metronomeEnabled = if (derived.isWalking) {
+            walkMetronomeEnabled
+        } else {
+            runMetronomeEnabled
+        }
+        if (status == STATUS_RUNNING && changedCurrentPhase && metronomeEnabled) {
+            scheduleMetronome(derived, immediate = false)
+        }
+        updateNotification(buildNotification(derived))
+        emitState(elapsed)
+    }
+
     private fun reconcileAndRender() {
         val elapsed = currentElapsed()
         if (elapsed >= targetMs) {
@@ -477,6 +547,14 @@ class WorkoutTimerService : Service() {
             )
         }
         builder.addAction(primaryAction)
+        builder.addAction(
+            notificationAction(
+                R.drawable.ic_notification_skip,
+                "Skip phase",
+                ACTION_SKIP_PHASE,
+                REQUEST_SKIP,
+            ),
+        )
         builder.addAction(
             notificationAction(
                 R.drawable.ic_notification_stop,
@@ -773,11 +851,14 @@ class WorkoutTimerService : Service() {
     )
 
     companion object {
-        const val ACTION_START = "com.intervalrunner.run_walk_timer.START"
-        const val ACTION_PAUSE = "com.intervalrunner.run_walk_timer.PAUSE"
-        const val ACTION_RESUME = "com.intervalrunner.run_walk_timer.RESUME"
-        const val ACTION_STOP = "com.intervalrunner.run_walk_timer.STOP"
-        const val ACTION_SET_SOUND = "com.intervalrunner.run_walk_timer.SET_SOUND"
+        const val ACTION_START = "com.skoryk.basepacer.START"
+        const val ACTION_PAUSE = "com.skoryk.basepacer.PAUSE"
+        const val ACTION_RESUME = "com.skoryk.basepacer.RESUME"
+        const val ACTION_STOP = "com.skoryk.basepacer.STOP"
+        const val ACTION_SKIP_PHASE = "com.skoryk.basepacer.SKIP_PHASE"
+        const val ACTION_SET_METRONOME_BPM =
+            "com.skoryk.basepacer.SET_METRONOME_BPM"
+        const val ACTION_SET_SOUND = "com.skoryk.basepacer.SET_SOUND"
 
         const val EXTRA_WALK_MS = "walkMs"
         const val EXTRA_RUN_MS = "runMs"
@@ -789,6 +870,8 @@ class WorkoutTimerService : Service() {
         const val EXTRA_WALK_BPM = "walkBpm"
         const val EXTRA_RUN_METRONOME_ENABLED = "runMetronomeEnabled"
         const val EXTRA_RUN_BPM = "runBpm"
+        const val EXTRA_PHASE = "phase"
+        const val EXTRA_BPM = "bpm"
         const val EXTRA_WALK_CUE_SOUND = "walkCueSound"
         const val EXTRA_RUN_CUE_SOUND = "runCueSound"
         const val EXTRA_COMPLETION_CUE_SOUND = "completionCueSound"
@@ -800,6 +883,8 @@ class WorkoutTimerService : Service() {
         private const val STATUS_PAUSED = "paused"
         private const val STATUS_COMPLETE = "complete"
         private const val LIMIT_INTERVALS = "intervals"
+        private const val PHASE_WALK = "walk"
+        private const val PHASE_RUN = "run"
         private const val PREFERENCES = "workout_timer_service"
         private const val KEY_STATUS = "status"
         private const val KEY_WALK_MS = "walk_ms"
@@ -829,6 +914,7 @@ class WorkoutTimerService : Service() {
         private const val REQUEST_PAUSE = 4103
         private const val REQUEST_RESUME = 4104
         private const val REQUEST_STOP = 4105
+        private const val REQUEST_SKIP = 4106
         private const val TICK_MS = 250L
         private const val CHECKPOINT_INTERVAL_MS = 5_000L
         private const val COMPLETION_SERVICE_RELEASE_DELAY_MS =

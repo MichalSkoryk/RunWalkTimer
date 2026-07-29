@@ -23,7 +23,7 @@ class DeveloperSupportButton extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Support the developer'),
         content: const Text(
-          'Run/Walk Timer is free to use. If it helps with your workouts, '
+          'Base Pacer is free to use. If it helps with your workouts, '
           'you can leave an optional tip on buycoffee.to. Tips do not unlock '
           'any features.',
         ),

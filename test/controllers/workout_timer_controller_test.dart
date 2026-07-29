@@ -25,6 +25,10 @@ void main() {
       expect(bridge.lastSoundSettings, const SoundSettings.defaults());
       expect(controller.status, WorkoutStatus.running);
 
+      controller.skipPhase();
+      await _flushAsyncWork();
+      expect(bridge.skipCalls, 1);
+
       controller.pause();
       await _flushAsyncWork();
       expect(bridge.pauseCalls, 1);
@@ -44,6 +48,61 @@ void main() {
       controller.dispose();
     },
   );
+
+  test('live BPM updates the plan and forwards the current phase', () async {
+    final bridge = _FakeBackgroundBridge();
+    final controller = WorkoutTimerController(backgroundBridge: bridge);
+    final metronomePlan = WorkoutPlan.intervals(
+      walkDuration: const Duration(seconds: 10),
+      runDuration: const Duration(seconds: 20),
+      intervalCount: 2,
+      walkMetronome: const MetronomeConfig(enabled: true, bpm: 100),
+    );
+
+    controller.start(metronomePlan);
+    await _flushAsyncWork();
+    controller.updateCurrentPhaseBpm(101);
+    await _flushAsyncWork();
+
+    expect(controller.plan!.walkMetronome.bpm, 101);
+    expect(bridge.bpmUpdates, [(WorkoutPhase.walk, 101)]);
+    controller.dispose();
+  });
+
+  test('fallback skip advances to the boundary and stays paused', () async {
+    final bridge = _FakeBackgroundBridge()..startSucceeds = false;
+    final controller = WorkoutTimerController(backgroundBridge: bridge);
+
+    controller.start(plan);
+    await _flushAsyncWork();
+    controller.pause();
+    controller.skipPhase();
+
+    expect(controller.status, WorkoutStatus.paused);
+    expect(controller.snapshot!.phase, WorkoutPhase.run);
+    expect(controller.snapshot!.activeElapsed, const Duration(seconds: 10));
+    expect(controller.snapshot!.totalRemaining, const Duration(seconds: 50));
+    controller.dispose();
+  });
+
+  test('fallback skip completes when the goal ends in this phase', () async {
+    final bridge = _FakeBackgroundBridge()..startSucceeds = false;
+    final controller = WorkoutTimerController(backgroundBridge: bridge);
+    final timedPlan = WorkoutPlan.timed(
+      walkDuration: const Duration(seconds: 10),
+      runDuration: const Duration(seconds: 20),
+      timeLimit: const Duration(seconds: 5),
+    );
+
+    controller.start(timedPlan);
+    await _flushAsyncWork();
+    controller.pause();
+    controller.skipPhase();
+
+    expect(controller.status, WorkoutStatus.complete);
+    expect(controller.snapshot!.totalRemaining, Duration.zero);
+    controller.dispose();
+  });
 
   test('notification actions project authoritative state into Flutter', () {
     final bridge = _FakeBackgroundBridge();
@@ -172,7 +231,10 @@ class _FakeBackgroundBridge implements BackgroundWorkoutBridge {
   int pauseCalls = 0;
   int resumeCalls = 0;
   int stopCalls = 0;
+  int skipCalls = 0;
+  bool startSucceeds = true;
   final List<bool> soundUpdates = [];
+  final List<(WorkoutPhase, int)> bpmUpdates = [];
   BackgroundWorkoutState? currentState;
   SoundSettings? lastSoundSettings;
 
@@ -184,7 +246,7 @@ class _FakeBackgroundBridge implements BackgroundWorkoutBridge {
   }) async {
     startCalls += 1;
     lastSoundSettings = soundSettings;
-    return true;
+    return startSucceeds;
   }
 
   @override
@@ -200,6 +262,16 @@ class _FakeBackgroundBridge implements BackgroundWorkoutBridge {
   @override
   Future<void> stopSession() async {
     stopCalls += 1;
+  }
+
+  @override
+  Future<void> skipPhase() async {
+    skipCalls += 1;
+  }
+
+  @override
+  Future<void> updateMetronomeBpm(WorkoutPhase phase, int bpm) async {
+    bpmUpdates.add((phase, bpm));
   }
 
   @override

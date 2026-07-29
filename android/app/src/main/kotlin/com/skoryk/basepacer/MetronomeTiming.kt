@@ -1,4 +1,4 @@
-package com.intervalrunner.run_walk_timer
+package com.skoryk.basepacer
 
 /** Pure timing helpers that avoid accumulating rounded per-beat intervals. */
 object MetronomeTiming {

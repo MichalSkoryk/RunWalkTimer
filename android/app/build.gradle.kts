@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.intervalrunner.run_walk_timer"
+    namespace = "com.skoryk.basepacer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.intervalrunner.run_walk_timer"
+        applicationId = "com.skoryk.basepacer"
         // Android 10 is API 29. Newer compile/target SDKs stay Flutter-managed.
         minSdk = 29
         targetSdk = flutter.targetSdkVersion

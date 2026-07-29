@@ -70,6 +70,7 @@ void main() {
       find.byKey(const ValueKey('walk-sound-setting-preview')),
     );
     expect(preview.onPressed, isNull);
+    expect(find.byKey(const ValueKey('privacy-policy-link')), findsOneWidget);
   });
 
   testWidgets('narrow enlarged-text layout does not overflow', (tester) async {

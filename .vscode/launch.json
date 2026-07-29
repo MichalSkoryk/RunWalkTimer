@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run/Walk Timer (connected Android)",
+      "name": "Base Pacer (connected Android)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",

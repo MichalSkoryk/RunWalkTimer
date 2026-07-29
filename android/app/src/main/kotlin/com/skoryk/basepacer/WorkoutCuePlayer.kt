@@ -1,4 +1,4 @@
-package com.intervalrunner.run_walk_timer
+package com.skoryk.basepacer
 
 import android.content.Context
 import android.media.AudioAttributes

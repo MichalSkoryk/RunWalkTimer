@@ -1,6 +1,6 @@
-# Run/Walk Timer
+# Base Pacer: Run/Walk Timer
 
-A focused Flutter interval timer for Android 10 and newer.
+Base Pacer is a focused Flutter interval timer for Android 10 and newer.
 
 [Download the newest APK][latest-release] · [Open the download website][website]
 
@@ -21,8 +21,11 @@ stop it in either of two ways:
 - Single MM:SS inputs for walking and running durations.
 - Single HH:MM:SS input for the total workout time.
 - Optional walking and running metronomes with independent 70–180 BPM values.
+- Live BPM controls that change the active phase tempo by one beat per minute
+  without interrupting the workout.
 - Cycle-count input validated as an integer of 1 or more.
-- Start, Pause, Resume, Restart, and Stop/reset behavior.
+- Start, Pause, Resume, Skip phase, Restart, and Stop/reset behavior. Skipping
+  removes the uncompleted phase time from the overall countdown.
 - Simultaneous current-interval and overall-workout countdowns, with the active
   Walk/Run mode always visible.
 - A compact active-workout view that hides setup while running, keeps controls
@@ -30,7 +33,7 @@ stop it in either of two ways:
 - A compact workout setup and Sound settings layout designed to minimize
   scrolling on typical phone screens.
 - An ongoing Android notification with the current Walk/Run phase, interval and
-  overall countdowns, and Pause/Resume and Stop actions.
+  overall countdowns, and Pause/Resume, Skip phase, and Stop actions.
 - A live Sound cues switch that mutes transition and completion tones while
   leaving metronomes and vibration feedback enabled.
 - A dedicated Sound settings screen with three persistent, previewable choices
@@ -147,7 +150,7 @@ While `flutter run` is active, press `r` in the terminal for hot reload and
 
 In Android Studio, you can instead open this project, select the connected phone
 in the device menu, and run `lib/main.dart`. A VS Code launch configuration is
-also included; select your Android device and run **Run/Walk Timer (connected
+also included; select your Android device and run **Base Pacer (connected
 Android)**.
 
 ## Recommended test strategy
@@ -181,6 +184,28 @@ The resulting APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`. Keep both the keystore and
 `android/key.properties` private and backed up securely. Future updates must be
 signed with the same key.
+
+## Build the Google Play App Bundle
+
+The Google Play application ID is `com.skoryk.basepacer`. Build the signed
+Android App Bundle with the same private release key:
+
+```powershell
+flutter clean
+flutter pub get
+flutter analyze
+flutter test
+flutter build appbundle --release
+```
+
+The bundle is written to `build/app/outputs/bundle/release/app-release.aab`.
+Google Play listing copy and upload-ready graphics are under `play-store/`.
+Ready-to-paste foreground-service answers are in
+`docs/google-play-foreground-service-declaration.md`.
+
+The public [privacy policy][privacy] is also linked from the app's Sound
+settings screen. The GitHub Pages workflow publishes it from
+`website/privacy.html`.
 
 The download website is deployed from `website/` by the GitHub Pages workflow
 in `.github/workflows/pages.yml`. It discovers the newest published GitHub
@@ -217,3 +242,4 @@ saved checkpoint instead of displaying a timer with no service behind it.
 [latest-release]: https://github.com/MichalSkoryk/RunWalkTimer/releases/latest
 [website]: https://michalskoryk.github.io/RunWalkTimer/
 [support]: https://buycoffee.to/michal-skoryk
+[privacy]: https://michalskoryk.github.io/RunWalkTimer/privacy.html

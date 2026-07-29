@@ -1,0 +1,27 @@
+Build a steady running base with simple walk/run intervals.
+
+Base Pacer lets you set separate walking and running durations, then repeat them for a total workout time or a chosen number of cycles. Clear countdowns keep the current phase and overall time easy to check at a glance.
+
+Keep your rhythm
+
+• Enable a metronome separately for walking and running
+• Set each tempo from 70 to 180 BPM
+• Adjust the active BPM while the workout is running
+• Choose from built-in transition, completion, and metronome sounds
+• Turn transition cues off whenever you prefer
+
+Stay in control
+
+• Start, pause, resume, skip, or stop a workout
+• Use background notification controls while the screen is off
+• See the current Walk or Run phase, interval time, and total time remaining
+• Finish after a chosen duration or number of cycles
+
+Simple and private
+
+• No account required
+• Workout configuration and sound preferences stay on your device
+• No ads
+• Optional tips do not unlock features
+
+Base Pacer is designed for Android 10 and newer.
