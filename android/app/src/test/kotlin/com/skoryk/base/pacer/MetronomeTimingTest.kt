@@ -1,4 +1,4 @@
-package com.intervalrunner.run_walk_timer
+package com.skoryk.base.pacer
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

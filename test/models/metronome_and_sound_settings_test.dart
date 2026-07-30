@@ -44,6 +44,24 @@ void main() {
         );
       }
     });
+
+    test('updates one phase BPM without changing the rest of the plan', () {
+      final plan = WorkoutPlan.intervals(
+        walkDuration: const Duration(minutes: 1),
+        runDuration: const Duration(minutes: 2),
+        intervalCount: 3,
+        walkMetronome: const MetronomeConfig(enabled: true, bpm: 100),
+        runMetronome: const MetronomeConfig(enabled: true, bpm: 160),
+      );
+
+      final updated = plan.withMetronomeBpm(WorkoutPhase.run, 161);
+
+      expect(updated.runMetronome.bpm, 161);
+      expect(updated.runMetronome.enabled, isTrue);
+      expect(updated.walkMetronome, same(plan.walkMetronome));
+      expect(updated.targetDuration, plan.targetDuration);
+      expect(updated.intervalCount, 3);
+    });
   });
 
   group('sound settings', () {

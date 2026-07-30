@@ -56,7 +56,7 @@ authorization prompt, and verify the connection with 'flutter devices'.
         $DeviceId = $androidDevices[0].id
     }
 
-    Write-Host "Launching Run/Walk Timer on $DeviceId..."
+    Write-Host "Launching Base Pacer on $DeviceId..."
     & flutter run -d $DeviceId
     if ($LASTEXITCODE -ne 0) { throw "flutter run failed." }
 }

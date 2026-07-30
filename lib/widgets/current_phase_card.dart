@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../core/duration_formatter.dart';
+import '../models/metronome_config.dart';
 import '../models/workout_plan.dart';
 import '../models/workout_snapshot.dart';
 import '../theme/app_theme.dart';
 
 class CurrentPhaseCard extends StatelessWidget {
-  const CurrentPhaseCard({required this.snapshot, super.key});
+  const CurrentPhaseCard({
+    required this.snapshot,
+    this.plan,
+    this.onSkipPhase,
+    this.onBpmChanged,
+    super.key,
+  });
 
   final WorkoutSnapshot? snapshot;
+  final WorkoutPlan? plan;
+  final VoidCallback? onSkipPhase;
+  final ValueChanged<int>? onBpmChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +36,7 @@ class CurrentPhaseCard extends StatelessWidget {
     final icon = isWalking
         ? Icons.directions_walk_rounded
         : Icons.directions_run_rounded;
+    final metronome = isWalking ? plan?.walkMetronome : plan?.runMetronome;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -58,18 +69,22 @@ class CurrentPhaseCard extends StatelessWidget {
                 children: [
                   Icon(icon, color: accent, size: 24),
                   const SizedBox(width: 8),
-                  Semantics(
-                    liveRegion: true,
-                    label: '${current.phase.label} interval',
-                    child: ExcludeSemantics(
-                      child: Text(
-                        current.phase.label.toUpperCase(),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: accent,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.3,
-                            ),
+                  Flexible(
+                    child: Semantics(
+                      liveRegion: true,
+                      label: '${current.phase.label} interval',
+                      child: ExcludeSemantics(
+                        child: Text(
+                          current.phase.label.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.3,
+                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -132,14 +147,18 @@ class CurrentPhaseCard extends StatelessWidget {
                       children: [
                         Icon(Icons.timer_outlined, color: accent, size: 18),
                         const SizedBox(width: 6),
-                        Text(
-                          'OVERALL TIME LEFT',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1,
-                              ),
+                        Flexible(
+                          child: Text(
+                            'OVERALL TIME LEFT',
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                ),
+                          ),
                         ),
                       ],
                     ),
@@ -174,6 +193,15 @@ class CurrentPhaseCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onSkipPhase != null) ...[
+                const SizedBox(height: 12),
+                _LivePhaseControls(
+                  phase: current.phase,
+                  bpm: metronome?.enabled == true ? metronome!.bpm : null,
+                  onSkipPhase: onSkipPhase!,
+                  onBpmChanged: onBpmChanged,
+                ),
+              ],
               if (status == WorkoutStatus.paused) ...[
                 const SizedBox(height: 10),
                 Text(
@@ -187,6 +215,176 @@ class CurrentPhaseCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LivePhaseControls extends StatelessWidget {
+  const _LivePhaseControls({
+    required this.phase,
+    required this.bpm,
+    required this.onSkipPhase,
+    required this.onBpmChanged,
+  });
+
+  final WorkoutPhase phase;
+  final int? bpm;
+  final VoidCallback onSkipPhase;
+  final ValueChanged<int>? onBpmChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (bpm == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.tonalIcon(
+          key: const ValueKey('skip-phase-button'),
+          onPressed: onSkipPhase,
+          icon: const Icon(Icons.skip_next_rounded),
+          label: const Text('Skip phase'),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+        final useIconOnlySkip = constraints.maxWidth < 330 || textScale > 1.3;
+        final skipButton = useIconOnlySkip
+            ? IconButton.filledTonal(
+                key: const ValueKey('skip-phase-button'),
+                onPressed: onSkipPhase,
+                tooltip: 'Skip phase',
+                icon: const Icon(Icons.skip_next_rounded),
+              )
+            : FilledButton.tonalIcon(
+                key: const ValueKey('skip-phase-button'),
+                onPressed: onSkipPhase,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.skip_next_rounded, size: 20),
+                label: const Text('Skip'),
+              );
+
+        return Row(
+          children: [
+            Expanded(
+              child: _LiveBpmControl(
+                phase: phase,
+                bpm: bpm!,
+                onChanged: onBpmChanged,
+              ),
+            ),
+            const SizedBox(width: 8),
+            skipButton,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LiveBpmControl extends StatelessWidget {
+  const _LiveBpmControl({
+    required this.phase,
+    required this.bpm,
+    required this.onChanged,
+  });
+
+  final WorkoutPhase phase;
+  final int bpm;
+  final ValueChanged<int>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '${phase.actionLabel} metronome, $bpm beats per minute',
+      container: true,
+      child: Container(
+        key: const ValueKey('live-bpm-control'),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.speed_rounded, size: 18),
+            const SizedBox(width: 4),
+            const Flexible(
+              child: Text(
+                'BPM',
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                softWrap: false,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const Spacer(),
+            _CompactBpmButton(
+              key: const ValueKey('live-bpm-decrease'),
+              tooltip: 'Decrease BPM',
+              onPressed: bpm > MetronomeConfig.minBpm && onChanged != null
+                  ? () => onChanged!(bpm - 1)
+                  : null,
+              icon: Icons.remove_rounded,
+            ),
+            SizedBox(
+              width: 34,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: ExcludeSemantics(
+                  child: Text(
+                    '$bpm',
+                    key: const ValueKey('live-bpm-value'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            _CompactBpmButton(
+              key: const ValueKey('live-bpm-increase'),
+              tooltip: 'Increase BPM',
+              onPressed: bpm < MetronomeConfig.maxBpm && onChanged != null
+                  ? () => onChanged!(bpm + 1)
+                  : null,
+              icon: Icons.add_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactBpmButton extends StatelessWidget {
+  const _CompactBpmButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      constraints: const BoxConstraints.tightFor(width: 34, height: 40),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, size: 19),
     );
   }
 }

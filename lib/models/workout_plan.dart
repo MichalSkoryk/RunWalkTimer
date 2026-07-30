@@ -99,6 +99,31 @@ class WorkoutPlan {
     );
   }
 
+  WorkoutPlan withMetronomeBpm(WorkoutPhase phase, int bpm) {
+    final updated = MetronomeConfig(
+      enabled: phase == WorkoutPhase.walk
+          ? walkMetronome.enabled
+          : runMetronome.enabled,
+      bpm: bpm,
+    );
+
+    return limitMode == WorkoutLimitMode.time
+        ? WorkoutPlan.timed(
+            walkDuration: walkDuration,
+            runDuration: runDuration,
+            timeLimit: timeLimit!,
+            walkMetronome: phase == WorkoutPhase.walk ? updated : walkMetronome,
+            runMetronome: phase == WorkoutPhase.run ? updated : runMetronome,
+          )
+        : WorkoutPlan.intervals(
+            walkDuration: walkDuration,
+            runDuration: runDuration,
+            intervalCount: intervalCount!,
+            walkMetronome: phase == WorkoutPhase.walk ? updated : walkMetronome,
+            runMetronome: phase == WorkoutPhase.run ? updated : runMetronome,
+          );
+  }
+
   static void _validatePhaseDurations(
     Duration walkDuration,
     Duration runDuration,

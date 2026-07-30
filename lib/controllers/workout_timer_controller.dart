@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/workout_timeline.dart';
 import '../models/background_workout_state.dart';
+import '../models/metronome_config.dart';
 import '../models/sound_settings.dart';
 import '../models/workout_plan.dart';
 import '../models/workout_snapshot.dart';
@@ -50,6 +51,92 @@ class WorkoutTimerController extends ChangeNotifier {
     _soundEnabled = enabled;
     if (_backgroundServiceActive) {
       unawaited(_backgroundBridge.updateSound(enabled));
+    }
+    notifyListeners();
+  }
+
+  void skipPhase() {
+    if (!isInProgress || _plan == null || _snapshot == null) {
+      return;
+    }
+
+    final usingBackgroundService = _backgroundServiceActive;
+    if (usingBackgroundService) {
+      unawaited(_backgroundBridge.skipPhase());
+    }
+
+    if (status == WorkoutStatus.running) {
+      synchronize();
+    }
+    if (!isInProgress) {
+      return;
+    }
+
+    final wasRunning = status == WorkoutStatus.running;
+    if (wasRunning) {
+      _bankActiveLeg();
+    }
+    final skippedElapsed = _bankedElapsed + _snapshot!.displayRemaining;
+    _bankedElapsed = skippedElapsed > _plan!.targetDuration
+        ? _plan!.targetDuration
+        : skippedElapsed;
+    _snapshot = WorkoutTimeline.snapshotFor(
+      plan: _plan!,
+      elapsed: _bankedElapsed,
+      status: wasRunning ? WorkoutStatus.running : WorkoutStatus.paused,
+    );
+
+    if (_snapshot!.status == WorkoutStatus.complete) {
+      _ticker?.cancel();
+      unawaited(_feedbackService.setKeepScreenOn(false));
+      if (!usingBackgroundService) {
+        unawaited(
+          _feedbackService.playCompletionCue(
+            soundEnabled: _soundEnabled,
+            soundSettings: _soundSettings,
+          ),
+        );
+      }
+    } else {
+      if (wasRunning) {
+        _activeLeg
+          ..reset()
+          ..start();
+        _startTicker();
+      }
+      if (!usingBackgroundService) {
+        unawaited(
+          _feedbackService.playPhaseCue(
+            _snapshot!.phase,
+            soundEnabled: _soundEnabled,
+            soundSettings: _soundSettings,
+          ),
+        );
+      }
+    }
+    notifyListeners();
+  }
+
+  void updateCurrentPhaseBpm(int bpm) {
+    if (!isInProgress ||
+        _plan == null ||
+        _snapshot == null ||
+        bpm < MetronomeConfig.minBpm ||
+        bpm > MetronomeConfig.maxBpm) {
+      return;
+    }
+
+    final phase = _snapshot!.phase;
+    final current = phase == WorkoutPhase.walk
+        ? _plan!.walkMetronome
+        : _plan!.runMetronome;
+    if (!current.enabled || current.bpm == bpm) {
+      return;
+    }
+
+    _plan = _plan!.withMetronomeBpm(phase, bpm);
+    if (_backgroundServiceActive) {
+      unawaited(_backgroundBridge.updateMetronomeBpm(phase, bpm));
     }
     notifyListeners();
   }

@@ -40,40 +40,49 @@ class CompactGoalInput extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+              final selector = SegmentedButton<WorkoutLimitMode>(
+                key: const ValueKey('goal-mode-selector'),
+                segments: const [
+                  ButtonSegment(
+                    value: WorkoutLimitMode.time,
+                    label: Text('Time'),
+                  ),
+                  ButtonSegment(
+                    value: WorkoutLimitMode.intervals,
+                    label: Text('Intervals'),
+                  ),
+                ],
+                selected: <WorkoutLimitMode>{mode},
+                onSelectionChanged: enabled
+                    ? (selection) => onModeChanged(selection.first)
+                    : null,
+                showSelectedIcon: false,
+                expandedInsets: EdgeInsets.zero,
+                style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              );
+              final title = Text(
                 'Stop after',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SegmentedButton<WorkoutLimitMode>(
-                  key: const ValueKey('goal-mode-selector'),
-                  segments: const [
-                    ButtonSegment(
-                      value: WorkoutLimitMode.time,
-                      label: Text('Time'),
-                    ),
-                    ButtonSegment(
-                      value: WorkoutLimitMode.intervals,
-                      label: Text('Intervals'),
-                    ),
-                  ],
-                  selected: <WorkoutLimitMode>{mode},
-                  onSelectionChanged: enabled
-                      ? (selection) => onModeChanged(selection.first)
-                      : null,
-                  showSelectedIcon: false,
-                  expandedInsets: EdgeInsets.zero,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-              ),
-            ],
+              );
+              if (constraints.maxWidth < 340 || textScale > 1.3) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [title, const SizedBox(height: 8), selector],
+                );
+              }
+              return Row(
+                children: [
+                  title,
+                  const SizedBox(width: 12),
+                  Expanded(child: selector),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 10),
           AnimatedSwitcher(

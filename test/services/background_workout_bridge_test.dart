@@ -56,4 +56,25 @@ void main() {
     expect(arguments['metronome'], 'digital_tick');
     bridge.dispose();
   });
+
+  test('live workout commands include the exact phase and BPM', () async {
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    final bridge = BackgroundWorkoutBridge();
+
+    await bridge.skipPhase();
+    await bridge.updateMetronomeBpm(WorkoutPhase.run, 171);
+
+    expect(calls[0].method, 'skipWorkoutPhase');
+    expect(calls[0].arguments, isNull);
+    expect(calls[1].method, 'setWorkoutServiceMetronomeBpm');
+    expect(
+      Map<Object?, Object?>.from(calls[1].arguments as Map),
+      <Object?, Object?>{'phase': 'run', 'bpm': 171},
+    );
+    bridge.dispose();
+  });
 }

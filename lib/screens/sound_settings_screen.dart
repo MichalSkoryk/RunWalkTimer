@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/sound_settings.dart';
 import '../services/sound_settings_service.dart';
+import '../widgets/privacy_policy_tile.dart';
 
 class SoundSettingsScreen extends StatefulWidget {
   const SoundSettingsScreen({
@@ -158,6 +159,13 @@ class _SoundSettingsScreenState extends State<SoundSettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 14),
+                const _SectionTitle(
+                  title: 'About',
+                  subtitle: 'Legal and privacy information.',
+                ),
+                const SizedBox(height: 8),
+                const Card(child: PrivacyPolicyTile()),
               ],
             ),
           ),

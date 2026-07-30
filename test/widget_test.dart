@@ -7,9 +7,13 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
-    expect(find.text('Run/Walk Timer'), findsOneWidget);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).title,
+      'Base Pacer: Run/Walk Timer',
+    );
+    expect(find.text('Base Pacer'), findsOneWidget);
     final supportButton = find.byKey(
       const ValueKey('developer-support-button'),
     );
@@ -54,7 +58,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.tap(find.byKey(const ValueKey('setup-sound-settings-button')));
     await tester.pumpAndSettle();
@@ -78,7 +82,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     final checkbox = find.byKey(const ValueKey('walk-metronome-checkbox'));
     await tester.tap(checkbox);
@@ -135,11 +139,52 @@ void main() {
     expect(find.text('Enter a BPM from 70 to 180.'), findsOneWidget);
   });
 
+  testWidgets('live BPM changes by one and skip advances the phase', (
+    tester,
+  ) async {
+    _useTallTestWindow(tester);
+    await tester.pumpWidget(const BasePacerApp());
+
+    await tester.tap(find.byKey(const ValueKey('walk-metronome-checkbox')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('start-button')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('live-bpm-control')), findsOneWidget);
+    expect(find.byKey(const ValueKey('live-bpm-value')), findsOneWidget);
+    expect(find.text('BPM'), findsOneWidget);
+    expect(find.text('100'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('live-bpm-increase')));
+    await tester.pump();
+    expect(find.text('101'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('skip-phase-button')));
+    await tester.pump();
+    expect(find.text('RUNNING'), findsOneWidget);
+    expect(find.byKey(const ValueKey('live-bpm-control')), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('overall-countdown'))).data,
+      '00:14:00',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pause-button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('skip-phase-button')));
+    await tester.pump();
+    expect(find.text('WALKING'), findsOneWidget);
+    expect(find.text('PAUSED'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('live-bpm-value'))).data,
+      '101',
+    );
+  });
+
   testWidgets('sound settings stay accessible but lock during a workout', (
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.tap(find.byKey(const ValueKey('start-button')));
     await tester.pump();
@@ -167,7 +212,7 @@ void main() {
           size: Size(320, 720),
           textScaler: TextScaler.linear(1.8),
         ),
-        child: RunWalkTimerApp(),
+        child: BasePacerApp(),
       ),
     );
 
@@ -179,7 +224,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     final walkInput = find.byKey(const ValueKey('walk-duration'));
     await tester.tap(walkInput);
@@ -194,7 +239,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.enterText(find.byKey(const ValueKey('run-duration')), '02:60');
     await tester.pump();
@@ -213,7 +258,7 @@ void main() {
 
   testWidgets('total workout time uses one HH:MM:SS input', (tester) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.tap(find.text('Time'));
     await tester.pumpAndSettle();
@@ -234,7 +279,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.tap(find.byKey(const ValueKey('start-button')));
     await tester.pump();
@@ -286,7 +331,7 @@ void main() {
     tester,
   ) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     await tester.enterText(
       find.byKey(const ValueKey('walk-duration')),
@@ -305,7 +350,7 @@ void main() {
 
   testWidgets('sound cues default to on and can be muted', (tester) async {
     _useTallTestWindow(tester);
-    await tester.pumpWidget(const RunWalkTimerApp());
+    await tester.pumpWidget(const BasePacerApp());
 
     final soundSwitch = find.byKey(const ValueKey('sound-cues-switch'));
     expect(tester.widget<SwitchListTile>(soundSwitch).value, isTrue);

@@ -1,4 +1,4 @@
-package com.intervalrunner.run_walk_timer
+package com.skoryk.base.pacer
 
 import android.Manifest
 import android.content.Intent
@@ -146,6 +146,25 @@ class MainActivity : FlutterActivity() {
                 }
                 "stopWorkoutService" -> {
                     sendWorkoutCommand(WorkoutTimerService.ACTION_STOP)
+                    result.success(null)
+                }
+                "skipWorkoutPhase" -> {
+                    sendWorkoutCommand(WorkoutTimerService.ACTION_SKIP_PHASE)
+                    result.success(null)
+                }
+                "setWorkoutServiceMetronomeBpm" -> {
+                    val intent = Intent(this, WorkoutTimerService::class.java).apply {
+                        action = WorkoutTimerService.ACTION_SET_METRONOME_BPM
+                        putExtra(
+                            WorkoutTimerService.EXTRA_PHASE,
+                            call.argument<String>("phase"),
+                        )
+                        putExtra(
+                            WorkoutTimerService.EXTRA_BPM,
+                            (call.argument<Any?>("bpm") as? Number)?.toInt() ?: 0,
+                        )
+                    }
+                    startService(intent)
                     result.success(null)
                 }
                 "setWorkoutServiceSound" -> {

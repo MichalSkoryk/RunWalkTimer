@@ -20,6 +20,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Support the developer'), findsOneWidget);
+    expect(find.textContaining('Base Pacer is free to use.'), findsOneWidget);
     expect(
       find.textContaining('Tips do not unlock any features.'),
       findsOneWidget,
@@ -104,7 +105,7 @@ class _TestApp extends StatelessWidget {
         appBar: AppBar(
           title: includeTitle
               ? const Text(
-                  'Run/Walk Timer',
+                  'Base Pacer',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 )
