@@ -1,0 +1,214 @@
+name: Publish Android release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pubspec.yaml"
+      - ".github/workflows/android-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish signed Android artifacts
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read application version
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          full_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*$/\1/p' pubspec.yaml | head -n 1)"
+          if [[ ! "$full_version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$ ]]; then
+            echo "pubspec.yaml version must use semantic-version+build-number, for example 1.4.0+8." >&2
+            exit 1
+          fi
+
+          version="${BASH_REMATCH[1]}"
+          build_number="${BASH_REMATCH[2]}"
+          tag="v${version}"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $tag already exists; no new artifacts will be published."
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+
+            if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+              tag_commit="$(git rev-list -n 1 "$tag")"
+              if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
+                echo "Tag $tag already points to $tag_commit instead of $GITHUB_SHA." >&2
+                echo "Increase the pubspec.yaml version rather than reusing a published tag." >&2
+                exit 1
+              fi
+            fi
+          fi
+
+      - name: Confirm a new release is needed
+        if: steps.version.outputs.release_exists == 'true'
+        shell: bash
+        run: |
+          echo "### ${{ steps.version.outputs.tag }} already exists" >> "$GITHUB_STEP_SUMMARY"
+          echo "No release was created. Increase the version in \`pubspec.yaml\` before publishing another release." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate release signing secrets
+        if: steps.version.outputs.release_exists != 'true'
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+          [[ -n "${ANDROID_KEYSTORE_BASE64:-}" ]] || missing+=(ANDROID_KEYSTORE_BASE64)
+          [[ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ]] || missing+=(ANDROID_KEYSTORE_PASSWORD)
+          [[ -n "${ANDROID_KEY_ALIAS:-}" ]] || missing+=(ANDROID_KEY_ALIAS)
+          [[ -n "${ANDROID_KEY_PASSWORD:-}" ]] || missing+=(ANDROID_KEY_PASSWORD)
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub Actions secrets: %s\n' "${missing[*]}" >&2
+            echo "Configure them under Settings > Secrets and variables > Actions." >&2
+            exit 1
+          fi
+
+      - name: Set up Java
+        if: steps.version.outputs.release_exists != 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter
+        if: steps.version.outputs.release_exists != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Configure release signing
+        if: steps.version.outputs.release_exists != 'true'
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          keystore_path="$RUNNER_TEMP/base-pacer-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+
+          escape_property() {
+            local value="$1"
+            value="${value//\\/\\\\}"
+            value="${value//$'\t'/\\t}"
+            value="${value//$'\n'/\\n}"
+            value="${value//$'\r'/\\r}"
+            value="${value// /\\ }"
+            value="${value//:/\\:}"
+            value="${value//=/\\=}"
+            value="${value//#/\\#}"
+            value="${value//!/\\!}"
+            printf '%s' "$value"
+          }
+
+          {
+            printf 'storePassword=%s\n' "$(escape_property "$ANDROID_KEYSTORE_PASSWORD")"
+            printf 'keyPassword=%s\n' "$(escape_property "$ANDROID_KEY_PASSWORD")"
+            printf 'keyAlias=%s\n' "$(escape_property "$ANDROID_KEY_ALIAS")"
+            printf 'storeFile=%s\n' "$(escape_property "$keystore_path")"
+          } > android/key.properties
+          chmod 600 android/key.properties
+
+      - name: Analyze and test
+        if: steps.version.outputs.release_exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Build signed APK and App Bundle
+        if: steps.version.outputs.release_exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Verify signatures and prepare release files
+        if: steps.version.outputs.release_exists != 'true'
+        id: artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          aab="build/app/outputs/bundle/release/app-release.aab"
+          [[ -s "$apk" ]] || { echo "Signed APK was not produced." >&2; exit 1; }
+          [[ -s "$aab" ]] || { echo "Signed App Bundle was not produced." >&2; exit 1; }
+
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -n "$apksigner" ]] || { echo "Android apksigner was not found." >&2; exit 1; }
+          "$apksigner" verify --verbose --print-certs "$apk"
+          jarsigner -verify "$aab"
+          unzip -Z1 "$aab" | grep -E '^META-INF/[^/]+\.(RSA|DSA|EC)$' > /dev/null || {
+            echo "The App Bundle does not contain a signing certificate." >&2
+            exit 1
+          }
+
+          release_dir="$RUNNER_TEMP/base-pacer-release"
+          mkdir -p "$release_dir"
+          cp "$apk" "$release_dir/base-pacer.apk"
+          cp "$aab" "$release_dir/base-pacer.aab"
+
+          echo "apk=$release_dir/base-pacer.apk" >> "$GITHUB_OUTPUT"
+          echo "aab=$release_dir/base-pacer.aab" >> "$GITHUB_OUTPUT"
+
+      - name: Publish latest GitHub release
+        if: steps.version.outputs.release_exists != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "${{ steps.artifacts.outputs.apk }}#Android APK" \
+            "${{ steps.artifacts.outputs.aab }}#Google Play Android App Bundle" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Base Pacer ${{ steps.version.outputs.tag }}" \
+            --generate-notes \
+            --latest
+
+          echo "### Published Base Pacer ${{ steps.version.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "The download website will discover this release automatically." >> "$GITHUB_STEP_SUMMARY"
