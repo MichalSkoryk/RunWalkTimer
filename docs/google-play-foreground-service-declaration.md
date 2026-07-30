@@ -5,7 +5,7 @@ service permissions** for Base Pacer.
 
 ## App and manifest details
 
-- Package name: `com.skoryk.basepacer`
+- Package name: `com.skoryk.base.pacer`
 - Foreground service: `.WorkoutTimerService`
 - Foreground service type: `specialUse`
 - Permissions:

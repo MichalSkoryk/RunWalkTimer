@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

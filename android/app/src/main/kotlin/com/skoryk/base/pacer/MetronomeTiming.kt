@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 /** Pure timing helpers that avoid accumulating rounded per-beat intervals. */
 object MetronomeTiming {

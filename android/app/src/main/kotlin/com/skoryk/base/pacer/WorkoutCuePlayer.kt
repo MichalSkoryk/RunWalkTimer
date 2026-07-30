@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 import android.content.Context
 import android.media.AudioAttributes

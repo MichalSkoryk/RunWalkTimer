@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 import android.Manifest
 import android.content.Intent

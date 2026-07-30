@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 /** Pure calculations shared by live workout commands and unit tests. */
 object LiveWorkoutTiming {

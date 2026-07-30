@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 object WorkoutServiceEvents {
     @Volatile

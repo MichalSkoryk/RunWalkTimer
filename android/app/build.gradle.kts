@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.skoryk.basepacer"
+    namespace = "com.skoryk.base.pacer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.skoryk.basepacer"
+        applicationId = "com.skoryk.base.pacer"
         // Android 10 is API 29. Newer compile/target SDKs stay Flutter-managed.
         minSdk = 29
         targetSdk = flutter.targetSdkVersion

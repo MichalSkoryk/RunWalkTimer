@@ -1,4 +1,4 @@
-package com.skoryk.basepacer
+package com.skoryk.base.pacer
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -851,14 +851,14 @@ class WorkoutTimerService : Service() {
     )
 
     companion object {
-        const val ACTION_START = "com.skoryk.basepacer.START"
-        const val ACTION_PAUSE = "com.skoryk.basepacer.PAUSE"
-        const val ACTION_RESUME = "com.skoryk.basepacer.RESUME"
-        const val ACTION_STOP = "com.skoryk.basepacer.STOP"
-        const val ACTION_SKIP_PHASE = "com.skoryk.basepacer.SKIP_PHASE"
+        const val ACTION_START = "com.skoryk.base.pacer.START"
+        const val ACTION_PAUSE = "com.skoryk.base.pacer.PAUSE"
+        const val ACTION_RESUME = "com.skoryk.base.pacer.RESUME"
+        const val ACTION_STOP = "com.skoryk.base.pacer.STOP"
+        const val ACTION_SKIP_PHASE = "com.skoryk.base.pacer.SKIP_PHASE"
         const val ACTION_SET_METRONOME_BPM =
-            "com.skoryk.basepacer.SET_METRONOME_BPM"
-        const val ACTION_SET_SOUND = "com.skoryk.basepacer.SET_SOUND"
+            "com.skoryk.base.pacer.SET_METRONOME_BPM"
+        const val ACTION_SET_SOUND = "com.skoryk.base.pacer.SET_SOUND"
 
         const val EXTRA_WALK_MS = "walkMs"
         const val EXTRA_RUN_MS = "runMs"

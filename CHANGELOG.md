@@ -6,7 +6,7 @@
 - Added in-app and notification controls to skip the remaining current phase.
 - Added live 70–180 BPM controls for the active metronome phase.
 - Live BPM changes persist per phase and take effect cleanly on the next beat.
-- Changed the Android application ID to `com.skoryk.basepacer` for the first
+- Changed the Android application ID to `com.skoryk.base.pacer` for the first
   Google Play release.
 - Added a public privacy policy and an in-app link that opens it in the browser.
 - Added Play Store listing copy, graphics, screenshots, and foreground-service

@@ -187,7 +187,7 @@ signed with the same key.
 
 ## Build the Google Play App Bundle
 
-The Google Play application ID is `com.skoryk.basepacer`. Build the signed
+The Google Play application ID is `com.skoryk.base.pacer`. Build the signed
 Android App Bundle with the same private release key:
 
 ```powershell
