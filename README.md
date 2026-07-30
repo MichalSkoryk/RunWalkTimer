@@ -203,6 +203,38 @@ Google Play listing copy and upload-ready graphics are under `play-store/`.
 Ready-to-paste foreground-service answers are in
 `docs/google-play-foreground-service-declaration.md`.
 
+## Automatic GitHub releases
+
+The `.github/workflows/android-release.yml` workflow publishes a signed APK and
+Android App Bundle whenever a new version in `pubspec.yaml` reaches `main`. It
+creates a `vX.Y.Z` GitHub Release, marks it as latest, and uploads stable
+`base-pacer.apk` and `base-pacer.aab` asset names. If that release already
+exists, the workflow exits successfully without rebuilding or republishing it.
+
+Configure these encrypted repository secrets under **Settings > Secrets and
+variables > Actions > New repository secret**:
+
+- `ANDROID_KEYSTORE_BASE64`: the release keystore encoded as Base64.
+- `ANDROID_KEYSTORE_PASSWORD`: the `storePassword` value from
+  `android/key.properties`.
+- `ANDROID_KEY_ALIAS`: the `keyAlias` value.
+- `ANDROID_KEY_PASSWORD`: the `keyPassword` value.
+
+On Windows, copy the Base64 keystore value to the clipboard with PowerShell:
+
+```powershell
+[Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes('C:\path\to\base-pacer-release.jks')
+) | Set-Clipboard
+```
+
+Never commit the keystore, `android/key.properties`, or any secret value. For a
+new release, increase both parts of the version, for example from `1.3.0+7` to
+`1.4.0+8`, and merge that change to `main`. The workflow runs analysis and
+tests, builds and verifies both signed artifacts, publishes the release, and
+the download website discovers it automatically through GitHub's latest-release
+API. A failed run can be retried from the Actions page after its cause is fixed.
+
 The public [privacy policy][privacy] is also linked from the app's Sound
 settings screen. The GitHub Pages workflow publishes it from
 `website/privacy.html`.
